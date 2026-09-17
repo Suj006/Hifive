@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +26,14 @@ import {
   IconUsers,
   IconChart,
 } from "@/components/icons";
+
+// Client-only: its initial open/closed state depends on localStorage, so it
+// must never be part of the server-rendered HTML (there'd be nothing to
+// hydrate that state against).
+const NainuGuide = dynamic(
+  () => import("@/components/nainu/nainu-guide").then((m) => m.NainuGuide),
+  { ssr: false }
+);
 
 export default function DashboardPage() {
   const { data, loading, error } = useApi<DashboardData>("/api/dashboard");
@@ -294,6 +303,8 @@ export default function DashboardPage() {
           </div>
         </>
       )}
+
+      <NainuGuide />
     </div>
   );
 }
