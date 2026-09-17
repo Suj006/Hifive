@@ -16,13 +16,14 @@ export interface NainuStep {
   cta?: string;
 }
 
-export const nainuSteps: NainuStep[] = [
-  {
-    title: "Hi, I'm Nainu! 👋",
-    body: "I'll show you around Hi Five by Jia in a few quick steps — tap Next whenever you're ready, or skip and explore on your own.",
-    icon: IconSparkle,
-    tone: "purple",
-  },
+export function getTimeGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+const WALKTHROUGH_STEPS: NainuStep[] = [
   {
     title: "1. Set up your Masters",
     body: "Start with the Masters menu — Item Master, Product Names, Categories, Vendors and Customers. This is the foundation everything else is built on.",
@@ -65,8 +66,23 @@ export const nainuSteps: NainuStep[] = [
   },
   {
     title: "That's it! 💖",
-    body: "You're all set. Click me anytime — bottom-right of the Dashboard — and I'll walk you through it again.",
+    body: "You're all set to start tracking purchases, production and sales like a pro.",
     icon: IconSparkle,
     tone: "pink",
   },
 ];
+
+export function buildNainuSteps(username?: string | null): NainuStep[] {
+  const greeting = getTimeGreeting();
+  const who = username ? `, ${username}` : "";
+  const introStep: NainuStep = {
+    title: `${greeting}${who}! 👋`,
+    body: `I'm Nainu! I hope you're having a lovely day so far. Ready for a quick look around Hi Five by Jia?`,
+    icon: IconSparkle,
+    tone: "purple",
+  };
+  return [introStep, ...WALKTHROUGH_STEPS];
+}
+
+export const NAINU_FAREWELL =
+  "Bye for now! Nainu is available 24/7 — just tap me anytime you need a hand. See you soon!";

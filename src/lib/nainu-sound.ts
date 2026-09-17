@@ -1,9 +1,10 @@
 // Nainu's voice and UI sound effects — no external audio files needed.
-// Speech uses the browser's built-in Web Speech API (speechSynthesis), tuned
-// with a higher pitch and peppy rate for a cartoonic delivery. The pop/click
-// cues are tiny synthesized tones via the Web Audio API. Browsers restrict
-// both until a user gesture unlocks them, so every call here is best-effort
-// and silently no-ops until that happens (e.g. the first click on the guide).
+// Speech uses the browser's built-in Web Speech API (speechSynthesis), pitched
+// up for a cute, kid-like voice but kept at a normal speaking pace. The
+// pop/click cues are tiny synthesized tones via the Web Audio API. Browsers
+// restrict both until a user gesture unlocks them, so every call here is
+// best-effort and silently no-ops until that happens (e.g. the first click
+// on the guide).
 
 let ctx: AudioContext | null = null;
 
@@ -96,8 +97,8 @@ export function speakCartoon(
   try {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.pitch = 1.7;
-    utterance.rate = 1.08;
+    utterance.pitch = 1.5;
+    utterance.rate = 1.0;
     utterance.volume = 0.9;
     const voice = pickCartoonVoice();
     if (voice) utterance.voice = voice;

@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { NainuCharacter } from "@/components/nainu/nainu-character";
 import { TypewriterText } from "@/components/nainu/typewriter-text";
-import { nainuSteps } from "@/components/nainu/steps";
+import { buildNainuSteps, NAINU_FAREWELL } from "@/components/nainu/steps";
 import { IconClose, IconArrowLeft } from "@/components/icons";
 import { playPop, playClick, speakCartoon, stopSpeaking } from "@/lib/nainu-sound";
+import { useApi } from "@/lib/use-api";
 import { cn } from "@/lib/cn";
 
 const SEEN_KEY = "hifive_nainu_seen_intro";
+// Safety net in case speech synthesis is unsupported/blocked and never fires
+// its "end" event — the farewell still closes on its own after this long.
+const FAREWELL_FALLBACK_MS = 6000;
 
 const TONE_CHIP: Record<string, string> = {
   pink: "bg-brand-pink/15 text-brand-pink-2",
@@ -38,39 +42,72 @@ function markSeen() {
 // Dashboard page) since its initial open/closed state depends on
 // localStorage — there's no server-rendered version to hydrate against.
 export function NainuGuide() {
+  const { data: me } = useApi<{ username: string }>("/api/auth/me");
+  const steps = useMemo(() => buildNainuSteps(me?.username), [me?.username]);
+
   const [open, setOpen] = useState(() => !hasSeenIntro());
   const [stepIndex, setStepIndex] = useState(0);
   const [talking, setTalking] = useState(false);
+  const [showFarewell, setShowFarewell] = useState(false);
+  const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const step = nainuSteps[stepIndex];
+  const step = steps[stepIndex];
   const isFirst = stepIndex === 0;
-  const isLast = stepIndex === nainuSteps.length - 1;
+  const isLast = stepIndex === steps.length - 1;
   const StepIcon = step.icon;
 
-  // Nainu speaks each step's text aloud (in a cartoonic voice) as soon as
-  // it's shown — this is an external-system side effect (not setState), so
-  // it belongs directly in the effect body, unlike a state reset.
+  // Nainu speaks each step's text aloud as soon as it's shown — an
+  // external-system side effect (not setState), so it belongs directly in
+  // the effect body. Doesn't fire while the farewell is playing, since
+  // neither `open` nor `step` changes when closeGuide() starts it.
   useEffect(() => {
-    if (!open) return;
+    if (!open || showFarewell) return;
     speakCartoon(step.body, {
       onStart: () => setTalking(true),
       onEnd: () => setTalking(false),
     });
     return () => stopSpeaking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- showFarewell intentionally excluded: it only ever flips true from inside closeGuide(), which already takes over speech itself
   }, [open, step]);
+
+  useEffect(() => {
+    return () => {
+      if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+    };
+  }, []);
 
   function openGuide() {
     playPop();
     setStepIndex(0);
+    setShowFarewell(false);
     setOpen(true);
     markSeen();
   }
 
-  function closeGuide() {
-    playClick();
+  function finalizeClose() {
+    if (closeTimeoutRef.current) {
+      clearTimeout(closeTimeoutRef.current);
+      closeTimeoutRef.current = null;
+    }
     stopSpeaking();
     setOpen(false);
+    setShowFarewell(false);
     markSeen();
+  }
+
+  function closeGuide() {
+    if (showFarewell) {
+      // Already saying bye — a second click skips straight to closed.
+      finalizeClose();
+      return;
+    }
+    playClick();
+    setShowFarewell(true);
+    speakCartoon(NAINU_FAREWELL, {
+      onStart: () => setTalking(true),
+      onEnd: finalizeClose,
+    });
+    closeTimeoutRef.current = setTimeout(finalizeClose, FAREWELL_FALLBACK_MS);
   }
 
   function goNext() {
@@ -79,7 +116,7 @@ export function NainuGuide() {
       closeGuide();
       return;
     }
-    setStepIndex((i) => Math.min(i + 1, nainuSteps.length - 1));
+    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   }
 
   function goBack() {
@@ -104,69 +141,85 @@ export function NainuGuide() {
             </button>
           </div>
 
-          <div className="flex items-start gap-3 px-4 pt-2">
-            <NainuCharacter size={64} talking={talking} className="shrink-0" />
-            <div className="relative min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-border bg-surface-2 px-3.5 py-3">
-              <div className="mb-1 flex items-center gap-1.5">
-                <div
-                  className={cn(
-                    "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
-                    TONE_CHIP[step.tone]
-                  )}
-                >
-                  <StepIcon className="h-3 w-3" />
-                </div>
-                <p className="text-sm font-semibold text-foreground">{step.title}</p>
-              </div>
-              <TypewriterText
-                key={stepIndex}
-                text={step.body}
-                className="text-sm leading-relaxed text-muted"
-              />
-            </div>
-          </div>
-
-          {step.href ? (
-            <div className="px-4 pt-3">
-              <Link
-                href={step.href}
-                onClick={markSeen}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:brightness-110"
-              >
-                {step.cta} →
-              </Link>
-            </div>
-          ) : null}
-
-          <div className="flex items-center justify-between px-4 py-3.5">
-            <div className="flex gap-1.5">
-              {nainuSteps.map((_, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "h-1.5 rounded-full transition-all",
-                    i === stepIndex ? "w-5 bg-[image:var(--gradient-brand)]" : "w-1.5 bg-white/15"
-                  )}
+          {showFarewell ? (
+            <div className="flex items-start gap-3 px-4 py-3">
+              <NainuCharacter size={64} talking={talking} waving className="shrink-0" />
+              <div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-border bg-surface-2 px-3.5 py-3">
+                <p className="mb-1 text-sm font-semibold text-foreground">Bye for now! 👋</p>
+                <TypewriterText
+                  key="farewell"
+                  text={NAINU_FAREWELL}
+                  className="text-sm leading-relaxed text-muted"
                 />
-              ))}
+              </div>
             </div>
-            <div className="flex gap-2">
-              {!isFirst ? (
-                <button
-                  onClick={goBack}
-                  className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground cursor-pointer"
-                >
-                  <IconArrowLeft className="h-3.5 w-3.5" /> Back
-                </button>
+          ) : (
+            <>
+              <div className="flex items-start gap-3 px-4 pt-2">
+                <NainuCharacter size={64} talking={talking} className="shrink-0" />
+                <div className="relative min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-border bg-surface-2 px-3.5 py-3">
+                  <div className="mb-1 flex items-center gap-1.5">
+                    <div
+                      className={cn(
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded-md",
+                        TONE_CHIP[step.tone]
+                      )}
+                    >
+                      <StepIcon className="h-3 w-3" />
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">{step.title}</p>
+                  </div>
+                  <TypewriterText
+                    key={stepIndex}
+                    text={step.body}
+                    className="text-sm leading-relaxed text-muted"
+                  />
+                </div>
+              </div>
+
+              {step.href ? (
+                <div className="px-4 pt-3">
+                  <Link
+                    href={step.href}
+                    onClick={markSeen}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:brightness-110"
+                  >
+                    {step.cta} →
+                  </Link>
+                </div>
               ) : null}
-              <button
-                onClick={goNext}
-                className="inline-flex h-8 items-center rounded-lg bg-[image:var(--gradient-brand)] px-3.5 text-xs font-semibold text-white shadow-[0_4px_16px_rgba(236,24,118,0.3)] transition-all hover:brightness-110 cursor-pointer"
-              >
-                {isLast ? "Let's go!" : "Next"}
-              </button>
-            </div>
-          </div>
+
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div className="flex gap-1.5">
+                  {steps.map((_, i) => (
+                    <span
+                      key={i}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all",
+                        i === stepIndex ? "w-5 bg-[image:var(--gradient-brand)]" : "w-1.5 bg-white/15"
+                      )}
+                    />
+                  ))}
+                </div>
+                <div className="flex gap-2">
+                  {!isFirst ? (
+                    <button
+                      onClick={goBack}
+                      className="inline-flex h-8 items-center gap-1 rounded-lg px-2.5 text-xs font-medium text-muted transition-colors hover:bg-white/5 hover:text-foreground cursor-pointer"
+                    >
+                      <IconArrowLeft className="h-3.5 w-3.5" /> Back
+                    </button>
+                  ) : null}
+                  <button
+                    onClick={goNext}
+                    className="inline-flex h-8 items-center rounded-lg bg-[image:var(--gradient-brand)] px-3.5 text-xs font-semibold text-white shadow-[0_4px_16px_rgba(236,24,118,0.3)] transition-all hover:brightness-110 cursor-pointer"
+                  >
+                    {isLast ? "Let's go!" : "Next"}
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <button
