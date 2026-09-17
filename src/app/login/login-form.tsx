@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/use-api";
 import { primeSpeech } from "@/lib/nainu-sound";
+import { resetNainuSession } from "@/lib/nainu-session";
 
 export function LoginForm() {
   const router = useRouter();
@@ -27,6 +28,9 @@ export function LoginForm() {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
+      // Nainu should greet once for this fresh login, even if the last
+      // session (in this same tab) already had its auto-greet.
+      resetNainuSession();
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
       router.push(next && next.startsWith("/") ? next : "/");

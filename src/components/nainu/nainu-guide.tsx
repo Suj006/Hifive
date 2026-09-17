@@ -7,6 +7,7 @@ import { TypewriterText } from "@/components/nainu/typewriter-text";
 import { buildNainuSteps, NAINU_FAREWELL } from "@/components/nainu/steps";
 import { IconClose, IconArrowLeft } from "@/components/icons";
 import { playPop, playClick, speakCartoon, stopSpeaking } from "@/lib/nainu-sound";
+import { hasGreetedThisSession, markGreetedThisSession } from "@/lib/nainu-session";
 import { useApi } from "@/lib/use-api";
 import { cn } from "@/lib/cn";
 
@@ -22,14 +23,17 @@ const TONE_CHIP: Record<string, string> = {
 };
 
 // This component is loaded client-only (see the dynamic import in the
-// Dashboard page). Nainu greets on every visit to the Dashboard, not just
-// the first — there's no "seen before" state to hydrate against, so there's
-// nothing SSR-sensitive here either way.
+// Dashboard page) — its initial open state reads an in-memory session flag,
+// so there's no server-rendered version to hydrate against.
 export function NainuGuide() {
   const { data: me, loading: meLoading } = useApi<{ username: string }>("/api/auth/me");
   const steps = useMemo(() => buildNainuSteps(me?.username), [me?.username]);
 
-  const [open, setOpen] = useState(true);
+  // Auto-open only for the first Dashboard visit of this login session —
+  // navigating to Dashboard again afterwards (e.g. via the sidebar link)
+  // should not keep popping Nainu open; only a deliberate tap on her
+  // launcher should reopen her after that.
+  const [open, setOpen] = useState(() => !hasGreetedThisSession());
   const [stepIndex, setStepIndex] = useState(0);
   const [talking, setTalking] = useState(false);
   const [showFarewell, setShowFarewell] = useState(false);
@@ -48,17 +52,17 @@ export function NainuGuide() {
     });
   }
 
-  // Greets exactly once per real mount (i.e. once per visit to the
-  // Dashboard), and waits for the username fetch to settle first so the
-  // greeting reliably includes it. Guarded by a ref rather than relying on
-  // the effect running only once, because React Strict Mode deliberately
-  // double-invokes effects in development — without the guard, the greeting
-  // fires, gets cancelled by Strict Mode's synthetic cleanup, and
-  // immediately re-fires, which is a known source of the speech engine
-  // silently dropping the utterance.
+  // Greets exactly once per login session, on the first mount only, and
+  // waits for the username fetch to settle first so the greeting reliably
+  // includes it. Guarded by a ref rather than relying on the effect running
+  // only once, because React Strict Mode deliberately double-invokes effects
+  // in development — without the guard, the greeting fires, gets cancelled
+  // by Strict Mode's synthetic cleanup, and immediately re-fires, which is a
+  // known source of the speech engine silently dropping the utterance.
   useEffect(() => {
-    if (greetedRef.current || meLoading) return;
+    if (greetedRef.current || meLoading || hasGreetedThisSession()) return;
     greetedRef.current = true;
+    markGreetedThisSession();
     speakStep(steps[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once meLoading settles (guarded above); steps[0] is read fresh, not stale
   }, [meLoading]);
@@ -75,6 +79,7 @@ export function NainuGuide() {
     setStepIndex(0);
     setShowFarewell(false);
     setOpen(true);
+    markGreetedThisSession();
     speakStep(steps[0]);
   }
 
