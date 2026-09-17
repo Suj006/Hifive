@@ -7,7 +7,7 @@ const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60; // 30 days
 
 function getSecret(): string {
   return (
-    process.env.AUTH_SECRET ??
+    process.env.AUTH_SECRET ||
     "hifive-by-jia-dev-secret-change-me-in-production-via-AUTH_SECRET"
   );
 }
