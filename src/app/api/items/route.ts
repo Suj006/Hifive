@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { itemSchema } from "@/lib/schemas";
-import { withErrorHandling } from "@/lib/api";
+import { withErrorHandling, jsonError } from "@/lib/api";
+import { generateItemCode, computeVariantKey } from "@/lib/item-code";
 
 export async function GET(request: NextRequest) {
   return withErrorHandling(async () => {
@@ -10,6 +11,7 @@ export async function GET(request: NextRequest) {
       where: type ? { type: type as "RAW_MATERIAL" | "PRODUCT" } : undefined,
       orderBy: { name: "asc" },
       include: {
+        category: true,
         _count: { select: { purchases: true, sales: true } },
         purchases: { select: { quantity: true } },
         sales: { select: { quantity: true } },
@@ -37,12 +39,37 @@ export async function POST(request: NextRequest) {
   return withErrorHandling(async () => {
     const body = await request.json();
     const data = itemSchema.parse(body);
+    const categoryId = data.type === "PRODUCT" ? data.categoryId || null : null;
+
+    const sequence = (await prisma.item.count({ where: { type: data.type } })) + 1;
+    const code = generateItemCode(data.type, sequence);
+    const variantKey = computeVariantKey(data.name, data.type, categoryId);
+
+    const existing = await prisma.item.findUnique({ where: { variantKey } });
+    if (existing) {
+      return jsonError(
+        categoryId
+          ? "An item with this name already exists for this category."
+          : "An item with this name already exists.",
+        409
+      );
+    }
+
     const item = await prisma.item.create({
       data: {
-        ...data,
-        category: data.category || null,
+        name: data.name,
+        type: data.type,
+        unit: data.unit,
+        group: data.group || null,
+        categoryId,
+        openingStock: data.openingStock,
+        reorderLevel: data.reorderLevel,
         notes: data.notes || null,
+        isActive: data.isActive,
+        code,
+        variantKey,
       },
+      include: { category: true },
     });
     return NextResponse.json(item, { status: 201 });
   });

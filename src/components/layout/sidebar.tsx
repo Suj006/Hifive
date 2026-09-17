@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { navLinks } from "@/components/layout/nav-links";
 import { BrandWordmark } from "@/components/brand/logo-mark";
+import { ThemeCustomizerButton } from "@/components/theme/theme-customizer";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -48,11 +49,14 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="rounded-xl border border-border bg-surface-2/60 p-3.5">
-        <p className="text-xs font-semibold text-foreground">Handmade with love</p>
-        <p className="mt-0.5 text-xs text-muted">
-          All amounts recorded in INR (₹)
-        </p>
+      <div className="flex flex-col gap-3">
+        <ThemeCustomizerButton />
+        <div className="rounded-xl border border-border bg-surface-2/60 p-3.5">
+          <p className="text-xs font-semibold text-foreground">Handmade with love</p>
+          <p className="mt-0.5 text-xs text-muted">
+            All amounts recorded in INR (₹)
+          </p>
+        </div>
       </div>
     </aside>
   );

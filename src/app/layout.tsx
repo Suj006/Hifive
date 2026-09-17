@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Baloo_2 } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/layout/app-shell";
+import { ThemeInitScript } from "@/components/theme/theme-init-script";
 
 const bodyFont = Manrope({
   variable: "--font-body",
@@ -25,8 +26,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${bodyFont.variable} ${headingFont.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col font-sans">
+        <ThemeInitScript />
         <AppShell>{children}</AppShell>
       </body>
     </html>

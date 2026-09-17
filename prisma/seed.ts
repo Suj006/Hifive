@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
+import { generateItemCode, computeVariantKey } from "../src/lib/item-code";
+import type { ItemType } from "../src/lib/types";
 
 const adapter = new PrismaBetterSqlite3({
   url: process.env.DATABASE_URL ?? "file:./dev.db",
@@ -14,28 +16,64 @@ function daysAgo(n: number) {
   return d;
 }
 
+let rmSeq = 0;
+let pdSeq = 0;
+
+function createItem(data: {
+  name: string;
+  type: ItemType;
+  unit: string;
+  group: string;
+  openingStock: number;
+  reorderLevel: number;
+  categoryId?: string | null;
+}) {
+  const sequence = data.type === "RAW_MATERIAL" ? ++rmSeq : ++pdSeq;
+  return prisma.item.create({
+    data: {
+      name: data.name,
+      type: data.type,
+      unit: data.unit,
+      group: data.group,
+      openingStock: data.openingStock,
+      reorderLevel: data.reorderLevel,
+      categoryId: data.categoryId ?? null,
+      code: generateItemCode(data.type, sequence),
+      variantKey: computeVariantKey(data.name, data.type, data.categoryId ?? null),
+    },
+  });
+}
+
 async function main() {
   console.log("Seeding Hi Five by Jia sample data…");
 
+  const categories = await Promise.all(
+    ["Kids", "Adults", "Unisex", "Male", "Female"].map((name) =>
+      prisma.category.create({ data: { name } })
+    )
+  );
+  const [kids, adults, unisex] = categories;
+
   const rawMaterials = await Promise.all(
     [
-      { name: "Silk Thread — Assorted", unit: "meter", category: "Thread", openingStock: 50, reorderLevel: 30 },
-      { name: "Glass Seed Beads", unit: "gram", category: "Beads", openingStock: 200, reorderLevel: 100 },
-      { name: "Heart Charms (Gold)", unit: "pcs", category: "Charms", openingStock: 40, reorderLevel: 20 },
-      { name: "Alphabet Beads Set", unit: "pcs", category: "Beads", openingStock: 60, reorderLevel: 25 },
-      { name: "Elastic Cord", unit: "meter", category: "Cord", openingStock: 30, reorderLevel: 15 },
-      { name: "Lobster Clasps", unit: "pcs", category: "Findings", openingStock: 25, reorderLevel: 15 },
-    ].map((d) => prisma.item.create({ data: { ...d, type: "RAW_MATERIAL" } }))
+      { name: "Silk Thread — Assorted", unit: "meter", group: "Thread", openingStock: 50, reorderLevel: 30 },
+      { name: "Glass Seed Beads", unit: "gram", group: "Beads", openingStock: 200, reorderLevel: 100 },
+      { name: "Heart Charms (Gold)", unit: "pcs", group: "Charms", openingStock: 40, reorderLevel: 20 },
+      { name: "Alphabet Beads Set", unit: "pcs", group: "Beads", openingStock: 60, reorderLevel: 25 },
+      { name: "Elastic Cord", unit: "meter", group: "Cord", openingStock: 30, reorderLevel: 15 },
+      { name: "Lobster Clasps", unit: "pcs", group: "Findings", openingStock: 25, reorderLevel: 15 },
+    ].map((d) => createItem({ ...d, type: "RAW_MATERIAL" }))
   );
 
-  const products = await Promise.all(
-    [
-      { name: "Friendship Bracelet — Classic", unit: "pcs", category: "Bracelet", openingStock: 5, reorderLevel: 0 },
-      { name: "Charm Bracelet — Heart", unit: "pcs", category: "Bracelet", openingStock: 5, reorderLevel: 0 },
-      { name: "Beaded Name Bracelet", unit: "pcs", category: "Bracelet", openingStock: 5, reorderLevel: 0 },
-      { name: "Beaded Keychain", unit: "pcs", category: "Keychain", openingStock: 8, reorderLevel: 0 },
-    ].map((d) => prisma.item.create({ data: { ...d, type: "PRODUCT" } }))
-  );
+  // "Charm Bracelet — Heart" is deliberately seeded twice, once per category, to
+  // demonstrate that the same product name can have its own stock per category.
+  const products = await Promise.all([
+    createItem({ name: "Friendship Bracelet — Classic", type: "PRODUCT", unit: "pcs", group: "Bracelet", openingStock: 5, reorderLevel: 0, categoryId: unisex.id }),
+    createItem({ name: "Charm Bracelet — Heart", type: "PRODUCT", unit: "pcs", group: "Bracelet", openingStock: 5, reorderLevel: 0, categoryId: kids.id }),
+    createItem({ name: "Charm Bracelet — Heart", type: "PRODUCT", unit: "pcs", group: "Bracelet", openingStock: 4, reorderLevel: 0, categoryId: adults.id }),
+    createItem({ name: "Beaded Name Bracelet", type: "PRODUCT", unit: "pcs", group: "Bracelet", openingStock: 5, reorderLevel: 0, categoryId: adults.id }),
+    createItem({ name: "Beaded Keychain", type: "PRODUCT", unit: "pcs", group: "Keychain", openingStock: 8, reorderLevel: 0, categoryId: unisex.id }),
+  ]);
 
   const vendors = await Promise.all(
     [
@@ -86,11 +124,11 @@ async function main() {
   const saleSeed = [
     { item: products[0], customer: customers[0], daysBack: 30, quantity: 2, rate: 249 },
     { item: products[1], customer: customers[1], daysBack: 26, quantity: 1, rate: 349 },
-    { item: products[2], customer: customers[2], daysBack: 20, quantity: 3, rate: 299 },
-    { item: products[3], customer: customers[3], daysBack: 14, quantity: 4, rate: 149 },
+    { item: products[3], customer: customers[2], daysBack: 20, quantity: 3, rate: 299 },
+    { item: products[4], customer: customers[3], daysBack: 14, quantity: 4, rate: 149 },
     { item: products[0], customer: customers[1], daysBack: 10, quantity: 1, rate: 249 },
-    { item: products[1], customer: customers[0], daysBack: 5, quantity: 2, rate: 349 },
-    { item: products[2], customer: customers[3], daysBack: 2, quantity: 1, rate: 299 },
+    { item: products[2], customer: customers[0], daysBack: 5, quantity: 2, rate: 349 },
+    { item: products[3], customer: customers[3], daysBack: 2, quantity: 1, rate: 299 },
   ];
 
   for (const [i, s] of saleSeed.entries()) {

@@ -33,7 +33,9 @@ export default function ItemsPage() {
       list = list.filter(
         (i) =>
           i.name.toLowerCase().includes(q) ||
-          (i.category ?? "").toLowerCase().includes(q)
+          i.code.toLowerCase().includes(q) ||
+          (i.group ?? "").toLowerCase().includes(q) ||
+          (i.category?.name ?? "").toLowerCase().includes(q)
       );
     }
     return list;
@@ -128,9 +130,10 @@ export default function ItemsPage() {
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[720px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="px-5 py-3 font-medium">Code</th>
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium">Type</th>
                   <th className="px-5 py-3 font-medium">Category</th>
@@ -146,14 +149,28 @@ export default function ItemsPage() {
                     key={item.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
-                    <td className="px-5 py-3.5 font-medium">{item.name}</td>
+                    <td className="px-5 py-3.5 whitespace-nowrap font-mono text-xs text-muted">
+                      {item.code}
+                    </td>
+                    <td className="px-5 py-3.5 font-medium">
+                      {item.name}
+                      {item.group ? (
+                        <span className="ml-1.5 text-xs font-normal text-muted">
+                          ({item.group})
+                        </span>
+                      ) : null}
+                    </td>
                     <td className="px-5 py-3.5">
                       <Badge tone={item.type === "RAW_MATERIAL" ? "teal" : "pink"}>
                         {item.type === "RAW_MATERIAL" ? "Raw material" : "Product"}
                       </Badge>
                     </td>
                     <td className="px-5 py-3.5 text-muted">
-                      {item.category || "—"}
+                      {item.category ? (
+                        <Badge tone="gold">{item.category.name}</Badge>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <span

@@ -142,3 +142,33 @@ export const IconClose = (props: SVGProps<SVGSVGElement>) => (
     <path d="M18 6 6 18M6 6l12 12" />
   </svg>
 );
+
+export const IconFilter = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M3 5h18l-7 8v6l-4 2v-8Z" />
+  </svg>
+);
+
+export const IconChart = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M4 20V10M11 20V4M18 20v-7" />
+    <path d="M2 20h20" />
+  </svg>
+);
+
+export const IconPalette = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M12 21a9 9 0 1 1 0-18c4.5 0 8.5 3.3 8.5 7.2 0 2.4-1.8 3.8-3.6 3.8h-2a1.8 1.8 0 0 0-1.1 3.2c.4.4.6.9.6 1.4 0 1.3-1.1 2.4-2.4 2.4Z" />
+    <circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="11" cy="7" r="1.1" fill="currentColor" stroke="none" />
+    <circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconDots = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    <circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none" />
+  </svg>
+);

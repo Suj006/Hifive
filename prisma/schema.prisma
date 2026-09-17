@@ -15,22 +15,40 @@ enum ItemType {
   PRODUCT
 }
 
+// Audience/segment master for finished products — e.g. Kids, Adults, Male, Female.
+// The same product name can exist once per category (each is tracked as its own
+// stock line), so "Charm Bracelet" for Kids and for Adults are separate Items.
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  items     Item[]
+}
+
 model Item {
-  id            String     @id @default(cuid())
-  name          String
-  type          ItemType
-  unit          String // e.g. pcs, gm, meter, box
-  category      String? // e.g. Beads, Thread, Charms, Bracelet, Keychain
-  openingStock  Float      @default(0)
-  reorderLevel  Float      @default(0)
-  notes         String?
-  isActive      Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  purchases     Purchase[]
-  sales         Sale[]
+  id           String    @id @default(cuid())
+  code         String    @unique // auto-generated, e.g. RM-0001 / PD-0001
+  name         String
+  type         ItemType
+  unit         String // e.g. pcs, gm, meter, box
+  group        String? // loose free-text tag, e.g. Beads, Thread, Bracelet, Keychain
+  categoryId   String? // audience/segment, mainly for PRODUCT items
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  // Normalized dedupe key (name + type + category), enforced unique so the same
+  // item/category combination can't be created twice. Computed server-side.
+  variantKey   String    @unique
+  openingStock Float     @default(0)
+  reorderLevel Float     @default(0)
+  notes        String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  purchases    Purchase[]
+  sales        Sale[]
 
   @@index([type])
+  @@index([categoryId])
 }
 
 model Vendor {

@@ -1,18 +1,22 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
-import { apiRequest } from "@/lib/use-api";
+import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Item, ItemType } from "@/lib/types";
+import type { Category, Item, ItemType } from "@/lib/types";
+import { UNIT_OPTIONS } from "@/lib/units";
 
 interface FormState {
   name: string;
   type: ItemType;
   unit: string;
-  category: string;
+  customUnit: string;
+  group: string;
+  categoryId: string;
   openingStock: string;
   reorderLevel: string;
   notes: string;
@@ -21,11 +25,14 @@ interface FormState {
 
 function initialState(item: Item | null, defaultType?: ItemType): FormState {
   if (item) {
+    const knownUnit = (UNIT_OPTIONS as readonly string[]).includes(item.unit);
     return {
       name: item.name,
       type: item.type,
-      unit: item.unit,
-      category: item.category ?? "",
+      unit: knownUnit ? item.unit : "other",
+      customUnit: knownUnit ? "" : item.unit,
+      group: item.group ?? "",
+      categoryId: item.categoryId ?? "",
       openingStock: String(item.openingStock),
       reorderLevel: String(item.reorderLevel),
       notes: item.notes ?? "",
@@ -35,8 +42,10 @@ function initialState(item: Item | null, defaultType?: ItemType): FormState {
   return {
     name: "",
     type: defaultType ?? "RAW_MATERIAL",
-    unit: "",
-    category: "",
+    unit: "pcs",
+    customUnit: "",
+    group: "",
+    categoryId: "",
     openingStock: "0",
     reorderLevel: "0",
     notes: "",
@@ -87,16 +96,32 @@ function ItemFormBody({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { push } = useToast();
+  const { data: categories } = useApi<Category[]>("/api/categories");
+  const activeCategories = (categories ?? []).filter(
+    (c) => c.isActive || c.id === item?.categoryId
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
+      const unit = form.unit === "other" ? form.customUnit.trim() : form.unit;
+      if (!unit) {
+        setError("Please enter a unit.");
+        setSaving(false);
+        return;
+      }
       const payload = {
-        ...form,
+        name: form.name,
+        type: form.type,
+        unit,
+        group: form.group,
+        categoryId: form.type === "PRODUCT" ? form.categoryId : "",
         openingStock: Number(form.openingStock || 0),
         reorderLevel: Number(form.reorderLevel || 0),
+        notes: form.notes,
+        isActive: form.isActive,
       };
       if (item) {
         await apiRequest(`/api/items/${item.id}`, {
@@ -122,6 +147,12 @@ function ItemFormBody({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {item ? (
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+          Item code: <span className="text-foreground">{item.code}</span>
+        </p>
+      ) : null}
+
       <Field label="Item name">
         <Input
           required
@@ -142,19 +173,61 @@ function ItemFormBody({
           </Select>
         </Field>
         <Field label="Unit">
-          <Input
-            required
-            value={form.unit}
-            onChange={(e) => setForm({ ...form, unit: e.target.value })}
-            placeholder="pcs, gm, meter…"
-          />
+          <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+            {UNIT_OPTIONS.map((u) => (
+              <option key={u} value={u}>
+                {u}
+              </option>
+            ))}
+            <option value="other">Other…</option>
+          </Select>
         </Field>
       </div>
 
-      <Field label="Category" hint="Optional, e.g. Beads, Thread, Bracelet">
+      {form.unit === "other" ? (
+        <Field label="Custom unit">
+          <Input
+            required
+            value={form.customUnit}
+            onChange={(e) => setForm({ ...form, customUnit: e.target.value })}
+            placeholder="e.g. bundle"
+          />
+        </Field>
+      ) : null}
+
+      {form.type === "PRODUCT" ? (
+        <Field
+          label="Category"
+          hint={
+            activeCategories.length === 0 ? (
+              <>
+                No categories yet —{" "}
+                <Link href="/categories" className="underline">
+                  add one
+                </Link>{" "}
+                (Kids, Adults, Male, Female…)
+              </>
+            ) : undefined
+          }
+        >
+          <Select
+            value={form.categoryId}
+            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+          >
+            <option value="">No category</option>
+            {activeCategories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+
+      <Field label="Group" hint="Optional, e.g. Beads, Thread, Bracelet">
         <Input
-          value={form.category}
-          onChange={(e) => setForm({ ...form, category: e.target.value })}
+          value={form.group}
+          onChange={(e) => setForm({ ...form, group: e.target.value })}
         />
       </Field>
 

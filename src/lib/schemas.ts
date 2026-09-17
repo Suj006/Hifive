@@ -6,10 +6,16 @@ export const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   type: itemTypeSchema,
   unit: z.string().trim().min(1, "Unit is required").max(30),
-  category: z.string().trim().max(80).optional().or(z.literal("")),
+  group: z.string().trim().max(80).optional().or(z.literal("")),
+  categoryId: z.string().trim().min(1).optional().or(z.literal("")),
   openingStock: z.coerce.number().min(0).default(0),
   reorderLevel: z.coerce.number().min(0).default(0),
   notes: z.string().trim().max(500).optional().or(z.literal("")),
+  isActive: z.coerce.boolean().default(true),
+});
+
+export const categorySchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(60),
   isActive: z.coerce.boolean().default(true),
 });
 

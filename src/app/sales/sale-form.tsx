@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import { todayInputValue, toDateInputValue } from "@/lib/format";
+import { todayInputValue, toDateInputValue, formatNumber } from "@/lib/format";
 import type { Customer, Item, Sale } from "@/lib/types";
 
 const PAYMENT_MODES = ["Cash", "UPI", "Bank Transfer", "Card", "Other"];
+const NO_CATEGORY = "__none__";
 
 interface FormState {
   date: string;
-  itemId: string;
+  productName: string;
+  categoryKey: string;
   customerId: string;
   quantity: string;
   rate: string;
@@ -28,7 +30,8 @@ function initialState(sale: Sale | null): FormState {
   if (sale) {
     return {
       date: toDateInputValue(sale.date),
-      itemId: sale.itemId,
+      productName: sale.item.name,
+      categoryKey: sale.item.categoryId ?? NO_CATEGORY,
       customerId: sale.customerId,
       quantity: String(sale.quantity),
       rate: String(sale.rate),
@@ -41,7 +44,8 @@ function initialState(sale: Sale | null): FormState {
   }
   return {
     date: todayInputValue(),
-    itemId: "",
+    productName: "",
+    categoryKey: "",
     customerId: "",
     quantity: "",
     rate: "",
@@ -90,6 +94,37 @@ function SaleFormBody({
   const [error, setError] = useState<string | null>(null);
   const { push } = useToast();
 
+  const activeItems = (items ?? []).filter((i) => i.isActive || i.id === sale?.itemId);
+  const activeCustomers = (customers ?? []).filter((c) => c.isActive || c.id === sale?.customerId);
+
+  const productNames = useMemo(
+    () => Array.from(new Set(activeItems.map((i) => i.name))).sort(),
+    [activeItems]
+  );
+
+  const categoryOptions = useMemo(
+    () =>
+      activeItems
+        .filter((i) => i.name === form.productName)
+        .map((i) => ({
+          key: i.categoryId ?? NO_CATEGORY,
+          label: i.category?.name ?? "No category",
+          item: i,
+        })),
+    [activeItems, form.productName]
+  );
+
+  const selectedItem = categoryOptions.find((c) => c.key === form.categoryKey)?.item ?? null;
+
+  const availableStock = useMemo(() => {
+    if (!selectedItem) return null;
+    const base = selectedItem.stock ?? 0;
+    // This sale's own quantity is already subtracted from the item's stock, so add
+    // it back when re-editing the same item — it's being replaced, not added on top.
+    if (sale && sale.itemId === selectedItem.id) return base + sale.quantity;
+    return base;
+  }, [selectedItem, sale]);
+
   const q = Number(form.quantity);
   const r = Number(form.rate);
   const d = Number(form.discount || 0);
@@ -99,17 +134,25 @@ function SaleFormBody({
       : "";
   const displayAmount = amountTouched ? form.amount : computedAmount || form.amount;
 
-  const activeItems = (items ?? []).filter((i) => i.isActive || i.id === sale?.itemId);
-  const activeCustomers = (customers ?? []).filter((c) => c.isActive || c.id === sale?.customerId);
+  const quantityExceedsStock =
+    availableStock !== null && form.quantity !== "" && q > availableStock;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!selectedItem) {
+      setError("Please select a product and category.");
+      return;
+    }
+    if (quantityExceedsStock) {
+      setError(`Only ${formatNumber(availableStock ?? 0)} in stock — reduce the quantity.`);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const payload = {
         date: form.date,
-        itemId: form.itemId,
+        itemId: selectedItem.id,
         customerId: form.customerId,
         quantity: Number(form.quantity),
         rate: Number(form.rate),
@@ -154,20 +197,65 @@ function SaleFormBody({
         </Field>
         <Field
           label="Product"
-          hint={activeItems.length === 0 ? "Add a product in Item Master first" : undefined}
+          hint={productNames.length === 0 ? "Add a product in Item Master first" : undefined}
         >
           <Select
             required
-            value={form.itemId}
-            onChange={(e) => setForm({ ...form, itemId: e.target.value })}
+            value={form.productName}
+            onChange={(e) =>
+              setForm({ ...form, productName: e.target.value, categoryKey: "" })
+            }
           >
             <option value="">Select product</option>
-            {activeItems.map((i) => (
-              <option key={i.id} value={i.id}>
-                {i.name} ({i.unit})
+            {productNames.map((name) => (
+              <option key={name} value={name}>
+                {name}
               </option>
             ))}
           </Select>
+        </Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <Field
+          label="Category"
+          hint={
+            !form.productName
+              ? "Choose a product first"
+              : categoryOptions.length === 1
+              ? undefined
+              : "Stock is tracked separately per category"
+          }
+        >
+          <Select
+            required
+            disabled={!form.productName}
+            value={form.categoryKey}
+            onChange={(e) => setForm({ ...form, categoryKey: e.target.value })}
+          >
+            <option value="">Select category</option>
+            {categoryOptions.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+
+        <Field label="Available stock">
+          <div className="flex h-10 items-center rounded-xl border border-border bg-surface-2 px-3.5 text-sm">
+            {selectedItem ? (
+              <span
+                className={
+                  quantityExceedsStock ? "font-semibold text-danger" : "font-semibold"
+                }
+              >
+                {formatNumber(availableStock ?? 0)} {selectedItem.unit}
+              </span>
+            ) : (
+              <span className="text-muted">—</span>
+            )}
+          </div>
         </Field>
       </div>
 
@@ -194,10 +282,12 @@ function SaleFormBody({
           <Input
             type="number"
             min={0}
+            max={availableStock ?? undefined}
             step="any"
             required
             value={form.quantity}
             onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+            className={quantityExceedsStock ? "border-danger focus:border-danger" : undefined}
           />
         </Field>
         <Field label="Rate (₹)">
@@ -233,6 +323,11 @@ function SaleFormBody({
           />
         </Field>
       </div>
+      {quantityExceedsStock ? (
+        <p className="-mt-2 text-sm text-danger">
+          Only {formatNumber(availableStock ?? 0)} {selectedItem?.unit} in stock.
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Invoice No." hint="Optional">
@@ -269,7 +364,7 @@ function SaleFormBody({
         <Button type="button" variant="secondary" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" disabled={saving}>
+        <Button type="submit" disabled={saving || quantityExceedsStock}>
           {saving ? "Saving…" : sale ? "Save changes" : "Record sale"}
         </Button>
       </div>

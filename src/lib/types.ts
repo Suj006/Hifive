@@ -1,11 +1,22 @@
 export type ItemType = "RAW_MATERIAL" | "PRODUCT";
 
+export interface Category {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  _count?: { items: number };
+}
+
 export interface Item {
   id: string;
+  code: string;
   name: string;
   type: ItemType;
   unit: string;
-  category: string | null;
+  group: string | null;
+  categoryId: string | null;
+  category: Category | null;
   openingStock: number;
   reorderLevel: number;
   notes: string | null;
@@ -95,4 +106,33 @@ export interface DashboardData {
     reorderLevel: number;
   }[];
   topProducts: { id: string; name: string; soldQty: number; soldAmount: number }[];
+}
+
+export interface ReportsData {
+  totals: {
+    purchaseAmount: number;
+    purchaseQty: number;
+    saleAmount: number;
+    saleQty: number;
+  };
+  itemWisePurchases: {
+    itemId: string;
+    name: string;
+    code: string;
+    unit: string;
+    qty: number;
+    amount: number;
+  }[];
+  itemWiseSales: {
+    itemId: string;
+    name: string;
+    code: string;
+    unit: string;
+    category: string;
+    qty: number;
+    amount: number;
+  }[];
+  vendorWise: { vendorId: string; name: string; qty: number; amount: number; entries: number }[];
+  customerWise: { customerId: string; name: string; qty: number; amount: number; entries: number }[];
+  categoryWise: { category: string; qty: number; amount: number }[];
 }

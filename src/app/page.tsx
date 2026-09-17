@@ -212,6 +212,12 @@ export default function DashboardPage() {
             >
               View all sales →
             </Link>
+            <Link
+              href="/reports"
+              className="rounded-xl border border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:brightness-110"
+            >
+              Drill down in Reports →
+            </Link>
           </div>
         </>
       )}
