@@ -2,6 +2,22 @@ import { z } from "zod";
 
 export const itemTypeSchema = z.enum(["RAW_MATERIAL", "PRODUCT"]);
 
+export const loginSchema = z.object({
+  username: z.string().trim().min(1, "Username is required").max(60),
+  password: z.string().min(1, "Password is required").max(200),
+});
+
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1, "Current password is required").max(200),
+    newPassword: z.string().min(6, "New password must be at least 6 characters").max(200),
+    confirmPassword: z.string().min(1, "Please confirm the new password").max(200),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "New password and confirmation don't match",
+    path: ["confirmPassword"],
+  });
+
 export const itemSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   type: itemTypeSchema,

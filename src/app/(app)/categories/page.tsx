@@ -9,29 +9,29 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { ProductName } from "@/lib/types";
-import { IconPlus, IconEdit, IconTrash, IconBox } from "@/components/icons";
-import { ProductNameFormModal } from "@/app/product-names/product-name-form";
+import type { Category } from "@/lib/types";
+import { IconPlus, IconEdit, IconTrash, IconTag } from "@/components/icons";
+import { CategoryFormModal } from "@/app/(app)/categories/category-form";
 
-export default function ProductNamesPage() {
-  const { data, loading, error, refetch } = useApi<ProductName[]>("/api/product-names");
+export default function CategoriesPage() {
+  const { data, loading, error, refetch } = useApi<Category[]>("/api/categories");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<ProductName | null>(null);
-  const [deleting, setDeleting] = useState<ProductName | null>(null);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [deleting, setDeleting] = useState<Category | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { push } = useToast();
-  const productNames = data ?? [];
+  const categories = data ?? [];
 
   async function handleDelete() {
     if (!deleting) return;
     setDeleteLoading(true);
     try {
-      await apiRequest(`/api/product-names/${deleting.id}`, { method: "DELETE" });
-      push("Product name deleted");
+      await apiRequest(`/api/categories/${deleting.id}`, { method: "DELETE" });
+      push("Category deleted");
       setDeleting(null);
       refetch();
     } catch (err) {
-      push(err instanceof Error ? err.message : "Could not delete product name", "error");
+      push(err instanceof Error ? err.message : "Could not delete category", "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -40,8 +40,8 @@ export default function ProductNamesPage() {
   return (
     <div>
       <PageHeader
-        title="Product Names"
-        description="Master list of finished products you make — e.g. Bracelet, Chain, Keychain, Bow. Selected when adding a product to Item Master."
+        title="Categories"
+        description="Audience/segment master for products — e.g. Kids, Adults, Male, Female. Each product can be tracked per category with its own stock."
         action={
           <Button
             onClick={() => {
@@ -49,7 +49,7 @@ export default function ProductNamesPage() {
               setFormOpen(true);
             }}
           >
-            <IconPlus className="h-4 w-4" /> Add product name
+            <IconPlus className="h-4 w-4" /> Add category
           </Button>
         }
       />
@@ -59,11 +59,11 @@ export default function ProductNamesPage() {
           <div className="p-6 text-sm text-muted">Loading…</div>
         ) : error ? (
           <div className="p-6 text-sm text-danger">{error}</div>
-        ) : productNames.length === 0 ? (
+        ) : categories.length === 0 ? (
           <EmptyState
-            icon={<IconBox className="h-6 w-6 text-brand-purple-2" />}
-            title="No product names yet"
-            description="Add the finished products you make — Bracelet, Chain, Keychain, Bow — then use them in Item Master."
+            icon={<IconTag className="h-6 w-6 text-brand-purple-2" />}
+            title="No categories yet"
+            description="Add categories like Kids, Adults, Male, Female — you'll be able to assign them to products in Item Master."
             action={
               <Button
                 size="sm"
@@ -72,7 +72,7 @@ export default function ProductNamesPage() {
                   setFormOpen(true);
                 }}
               >
-                <IconPlus className="h-4 w-4" /> Add product name
+                <IconPlus className="h-4 w-4" /> Add category
               </Button>
             }
           />
@@ -82,23 +82,23 @@ export default function ProductNamesPage() {
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 font-medium text-right">Items using it</th>
+                  <th className="px-5 py-3 font-medium text-right">Products</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {productNames.map((p) => (
+                {categories.map((c) => (
                   <tr
-                    key={p.id}
+                    key={c.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
-                    <td className="px-5 py-3.5 font-medium">{p.name}</td>
+                    <td className="px-5 py-3.5 font-medium">{c.name}</td>
                     <td className="px-5 py-3.5 text-right text-muted">
-                      {p._count?.items ?? 0}
+                      {c._count?.items ?? 0}
                     </td>
                     <td className="px-5 py-3.5">
-                      {p.isActive ? (
+                      {c.isActive ? (
                         <Badge tone="success">Active</Badge>
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
@@ -108,7 +108,7 @@ export default function ProductNamesPage() {
                       <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => {
-                            setEditing(p);
+                            setEditing(c);
                             setFormOpen(true);
                           }}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
@@ -117,7 +117,7 @@ export default function ProductNamesPage() {
                           <IconEdit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => setDeleting(p)}
+                          onClick={() => setDeleting(c)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                           aria-label="Delete"
                         >
@@ -133,19 +133,19 @@ export default function ProductNamesPage() {
         )}
       </Card>
 
-      <ProductNameFormModal
+      <CategoryFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={refetch}
-        productName={editing}
+        category={editing}
       />
 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Delete product name?"
-        description={`This will permanently remove "${deleting?.name}" from the product name master.`}
+        title="Delete category?"
+        description={`This will permanently remove "${deleting?.name}".`}
         loading={deleteLoading}
       />
     </div>

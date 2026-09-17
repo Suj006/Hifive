@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import type { Item, ItemType } from "@/lib/types";
 import { formatNumber } from "@/lib/format";
 import { IconPlus, IconEdit, IconTrash, IconSearch, IconLayers } from "@/components/icons";
-import { ItemFormModal } from "@/app/items/item-form";
+import { ItemFormModal } from "@/app/(app)/items/item-form";
 
 export default function ItemsPage() {
   const { data, loading, error, refetch } = useApi<Item[]>("/api/items");

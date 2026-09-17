@@ -10,46 +10,46 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Sale } from "@/lib/types";
+import type { Purchase } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
-import { IconPlus, IconEdit, IconTrash, IconSearch, IconTag } from "@/components/icons";
-import { SaleFormModal } from "@/app/sales/sale-form";
+import { IconPlus, IconEdit, IconTrash, IconSearch, IconCartDown } from "@/components/icons";
+import { PurchaseFormModal } from "@/app/(app)/purchases/purchase-form";
 
-export default function SalesPage() {
-  const { data, loading, error, refetch } = useApi<Sale[]>("/api/sales");
+export default function PurchasesPage() {
+  const { data, loading, error, refetch } = useApi<Purchase[]>("/api/purchases");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Sale | null>(null);
-  const [deleting, setDeleting] = useState<Sale | null>(null);
+  const [editing, setEditing] = useState<Purchase | null>(null);
+  const [deleting, setDeleting] = useState<Purchase | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { push } = useToast();
 
-  const sales = useMemo(() => {
+  const purchases = useMemo(() => {
     let list = data ?? [];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
-        (s) =>
-          s.item.name.toLowerCase().includes(q) ||
-          s.customer.name.toLowerCase().includes(q) ||
-          (s.invoiceNumber ?? "").toLowerCase().includes(q)
+        (p) =>
+          p.item.name.toLowerCase().includes(q) ||
+          p.vendor.name.toLowerCase().includes(q) ||
+          (p.invoiceNumber ?? "").toLowerCase().includes(q)
       );
     }
     return list;
   }, [data, search]);
 
-  const total = sales.reduce((sum, s) => sum + s.amount, 0);
+  const total = purchases.reduce((sum, p) => sum + p.amount, 0);
 
   async function handleDelete() {
     if (!deleting) return;
     setDeleteLoading(true);
     try {
-      await apiRequest(`/api/sales/${deleting.id}`, { method: "DELETE" });
-      push("Sale deleted");
+      await apiRequest(`/api/purchases/${deleting.id}`, { method: "DELETE" });
+      push("Purchase deleted");
       setDeleting(null);
       refetch();
     } catch (err) {
-      push(err instanceof Error ? err.message : "Could not delete sale", "error");
+      push(err instanceof Error ? err.message : "Could not delete purchase", "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -58,8 +58,8 @@ export default function SalesPage() {
   return (
     <div>
       <PageHeader
-        title="Sales"
-        description="Sales of finished bracelets & accessories to customers."
+        title="Purchases"
+        description="Raw material purchases recorded against the item master."
         action={
           <Button
             onClick={() => {
@@ -67,7 +67,7 @@ export default function SalesPage() {
               setFormOpen(true);
             }}
           >
-            <IconPlus className="h-4 w-4" /> Record sale
+            <IconPlus className="h-4 w-4" /> Record purchase
           </Button>
         }
       />
@@ -76,15 +76,15 @@ export default function SalesPage() {
         <div className="relative w-full sm:w-72">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <Input
-            placeholder="Search product, customer, invoice…"
+            placeholder="Search item, vendor, invoice…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        {sales.length > 0 ? (
+        {purchases.length > 0 ? (
           <p className="text-sm text-muted">
-            {sales.length} entries · Total{" "}
+            {purchases.length} entries · Total{" "}
             <span className="font-semibold text-foreground">{formatINR(total)}</span>
           </p>
         ) : null}
@@ -92,14 +92,14 @@ export default function SalesPage() {
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-6 text-sm text-muted">Loading sales…</div>
+          <div className="p-6 text-sm text-muted">Loading purchases…</div>
         ) : error ? (
           <div className="p-6 text-sm text-danger">{error}</div>
-        ) : sales.length === 0 ? (
+        ) : purchases.length === 0 ? (
           <EmptyState
-            icon={<IconTag className="h-6 w-6 text-brand-pink-2" />}
-            title="No sales recorded"
-            description="Record your first sale of a finished product — date, customer and amount in INR."
+            icon={<IconCartDown className="h-6 w-6 text-brand-purple-2" />}
+            title="No purchases recorded"
+            description="Record your first raw material purchase — date, vendor and amount in INR."
             action={
               <Button
                 size="sm"
@@ -108,7 +108,7 @@ export default function SalesPage() {
                   setFormOpen(true);
                 }}
               >
-                <IconPlus className="h-4 w-4" /> Record sale
+                <IconPlus className="h-4 w-4" /> Record purchase
               </Button>
             }
           />
@@ -118,8 +118,8 @@ export default function SalesPage() {
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Date</th>
-                  <th className="px-5 py-3 font-medium">Product</th>
-                  <th className="px-5 py-3 font-medium">Customer</th>
+                  <th className="px-5 py-3 font-medium">Item</th>
+                  <th className="px-5 py-3 font-medium">Vendor</th>
                   <th className="px-5 py-3 font-medium text-right">Qty</th>
                   <th className="px-5 py-3 font-medium text-right">Rate</th>
                   <th className="px-5 py-3 font-medium text-right">Amount</th>
@@ -128,28 +128,28 @@ export default function SalesPage() {
                 </tr>
               </thead>
               <tbody>
-                {sales.map((s) => (
+                {purchases.map((p) => (
                   <tr
-                    key={s.id}
+                    key={p.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
                     <td className="px-5 py-3.5 whitespace-nowrap text-muted">
-                      {formatDate(s.date)}
+                      {formatDate(p.date)}
                     </td>
-                    <td className="px-5 py-3.5 font-medium">{s.item.name}</td>
-                    <td className="px-5 py-3.5">{s.customer.name}</td>
+                    <td className="px-5 py-3.5 font-medium">{p.item.name}</td>
+                    <td className="px-5 py-3.5">{p.vendor.name}</td>
                     <td className="px-5 py-3.5 text-right">
-                      {formatNumber(s.quantity)} {s.item.unit}
+                      {formatNumber(p.quantity)} {p.item.unit}
                     </td>
                     <td className="px-5 py-3.5 text-right text-muted">
-                      {formatINR(s.rate)}
+                      {formatINR(p.rate)}
                     </td>
                     <td className="px-5 py-3.5 text-right font-semibold">
-                      {formatINR(s.amount)}
+                      {formatINR(p.amount)}
                     </td>
                     <td className="px-5 py-3.5">
-                      {s.paymentMode ? (
-                        <Badge tone="teal">{s.paymentMode}</Badge>
+                      {p.paymentMode ? (
+                        <Badge tone="purple">{p.paymentMode}</Badge>
                       ) : (
                         "—"
                       )}
@@ -158,7 +158,7 @@ export default function SalesPage() {
                       <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => {
-                            setEditing(s);
+                            setEditing(p);
                             setFormOpen(true);
                           }}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
@@ -167,7 +167,7 @@ export default function SalesPage() {
                           <IconEdit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => setDeleting(s)}
+                          onClick={() => setDeleting(p)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                           aria-label="Delete"
                         >
@@ -183,19 +183,19 @@ export default function SalesPage() {
         )}
       </Card>
 
-      <SaleFormModal
+      <PurchaseFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={refetch}
-        sale={editing}
+        purchase={editing}
       />
 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Delete sale entry?"
-        description={`This will permanently remove the ${deleting?.item.name} sale to ${deleting?.customer.name}.`}
+        title="Delete purchase entry?"
+        description={`This will permanently remove the ${deleting?.item.name} purchase from ${deleting?.vendor.name}.`}
         loading={deleteLoading}
       />
     </div>

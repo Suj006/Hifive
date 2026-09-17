@@ -15,6 +15,14 @@ enum ItemType {
   PRODUCT
 }
 
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
 // Audience/segment master for finished products — e.g. Kids, Adults, Male, Female.
 // The same product name can exist once per category (each is tracked as its own
 // stock line), so "Charm Bracelet" for Kids and for Adults are separate Items.

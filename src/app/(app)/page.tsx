@@ -6,6 +6,7 @@ import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
+import { QuickActionTile, ManageTile } from "@/components/dashboard/tiles";
 import { useApi } from "@/lib/use-api";
 import type { DashboardData } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
@@ -16,6 +17,13 @@ import {
   IconRupee,
   IconAlert,
   IconLayers,
+  IconSparkle,
+  IconTag,
+  IconClipboard,
+  IconFilter,
+  IconTruck,
+  IconUsers,
+  IconChart,
 } from "@/components/icons";
 
 export default function DashboardPage() {
@@ -26,6 +34,7 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         description="Hi Five by Jia — purchase & sale overview, all figures in INR."
+        back={false}
       />
 
       {error ? (
@@ -76,7 +85,83 @@ export default function DashboardPage() {
             />
           </div>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <div className="mt-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              Quick actions
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <QuickActionTile
+                href="/purchases"
+                icon={<IconCartDown className="h-5 w-5" />}
+                title="Record purchase"
+                subtitle="Log a raw material buy"
+                tone="purple"
+              />
+              <QuickActionTile
+                href="/production"
+                icon={<IconSparkle className="h-5 w-5" />}
+                title="Record production"
+                subtitle="Log items you've made"
+                tone="teal"
+              />
+              <QuickActionTile
+                href="/sales"
+                icon={<IconTag className="h-5 w-5" />}
+                title="Record sale"
+                subtitle="Log a finished sale"
+                tone="pink"
+              />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              Manage
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+              <ManageTile
+                href="/items"
+                icon={<IconLayers className="h-5 w-5" />}
+                label="Item Master"
+                count={data.counts.items}
+                tone="pink"
+              />
+              <ManageTile
+                href="/product-names"
+                icon={<IconClipboard className="h-5 w-5" />}
+                label="Product Names"
+                tone="purple"
+              />
+              <ManageTile
+                href="/categories"
+                icon={<IconFilter className="h-5 w-5" />}
+                label="Categories"
+                tone="teal"
+              />
+              <ManageTile
+                href="/vendors"
+                icon={<IconTruck className="h-5 w-5" />}
+                label="Vendors"
+                count={data.counts.vendors}
+                tone="gold"
+              />
+              <ManageTile
+                href="/customers"
+                icon={<IconUsers className="h-5 w-5" />}
+                label="Customers"
+                count={data.counts.customers}
+                tone="pink"
+              />
+              <ManageTile
+                href="/reports"
+                icon={<IconChart className="h-5 w-5" />}
+                label="Reports"
+                tone="purple"
+              />
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-3">
             <Card className="xl:col-span-2">
               <CardHeader>
                 <CardTitle>Recent activity</CardTitle>
@@ -200,18 +285,6 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/purchases"
-              className="rounded-xl border border-border bg-surface-2 px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
-            >
-              View all purchases →
-            </Link>
-            <Link
-              href="/sales"
-              className="rounded-xl border border-border bg-surface-2 px-4 py-2 text-sm font-medium text-muted transition-colors hover:text-foreground"
-            >
-              View all sales →
-            </Link>
             <Link
               href="/reports"
               className="rounded-xl border border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:brightness-110"

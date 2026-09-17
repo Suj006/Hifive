@@ -10,46 +10,45 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Purchase } from "@/lib/types";
-import { formatDate, formatINR, formatNumber } from "@/lib/format";
-import { IconPlus, IconEdit, IconTrash, IconSearch, IconCartDown } from "@/components/icons";
-import { PurchaseFormModal } from "@/app/purchases/purchase-form";
+import type { Production } from "@/lib/types";
+import { formatDate, formatNumber } from "@/lib/format";
+import { IconPlus, IconEdit, IconTrash, IconSearch, IconSparkle } from "@/components/icons";
+import { ProductionFormModal } from "@/app/(app)/production/production-form";
 
-export default function PurchasesPage() {
-  const { data, loading, error, refetch } = useApi<Purchase[]>("/api/purchases");
+export default function ProductionPage() {
+  const { data, loading, error, refetch } = useApi<Production[]>("/api/production");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Purchase | null>(null);
-  const [deleting, setDeleting] = useState<Purchase | null>(null);
+  const [editing, setEditing] = useState<Production | null>(null);
+  const [deleting, setDeleting] = useState<Production | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { push } = useToast();
 
-  const purchases = useMemo(() => {
+  const entries = useMemo(() => {
     let list = data ?? [];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
         (p) =>
           p.item.name.toLowerCase().includes(q) ||
-          p.vendor.name.toLowerCase().includes(q) ||
-          (p.invoiceNumber ?? "").toLowerCase().includes(q)
+          (p.item.category?.name ?? "").toLowerCase().includes(q)
       );
     }
     return list;
   }, [data, search]);
 
-  const total = purchases.reduce((sum, p) => sum + p.amount, 0);
+  const totalQty = entries.reduce((sum, p) => sum + p.quantity, 0);
 
   async function handleDelete() {
     if (!deleting) return;
     setDeleteLoading(true);
     try {
-      await apiRequest(`/api/purchases/${deleting.id}`, { method: "DELETE" });
-      push("Purchase deleted");
+      await apiRequest(`/api/production/${deleting.id}`, { method: "DELETE" });
+      push("Production entry deleted");
       setDeleting(null);
       refetch();
     } catch (err) {
-      push(err instanceof Error ? err.message : "Could not delete purchase", "error");
+      push(err instanceof Error ? err.message : "Could not delete production entry", "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -58,8 +57,8 @@ export default function PurchasesPage() {
   return (
     <div>
       <PageHeader
-        title="Purchases"
-        description="Raw material purchases recorded against the item master."
+        title="Production"
+        description="Log the finished products you make — each entry adds to that product's available stock for sale."
         action={
           <Button
             onClick={() => {
@@ -67,7 +66,7 @@ export default function PurchasesPage() {
               setFormOpen(true);
             }}
           >
-            <IconPlus className="h-4 w-4" /> Record purchase
+            <IconPlus className="h-4 w-4" /> Record items made
           </Button>
         }
       />
@@ -76,30 +75,30 @@ export default function PurchasesPage() {
         <div className="relative w-full sm:w-72">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <Input
-            placeholder="Search item, vendor, invoice…"
+            placeholder="Search product, category…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        {purchases.length > 0 ? (
+        {entries.length > 0 ? (
           <p className="text-sm text-muted">
-            {purchases.length} entries · Total{" "}
-            <span className="font-semibold text-foreground">{formatINR(total)}</span>
+            {entries.length} entries · Total made{" "}
+            <span className="font-semibold text-foreground">{formatNumber(totalQty)}</span>
           </p>
         ) : null}
       </div>
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-6 text-sm text-muted">Loading purchases…</div>
+          <div className="p-6 text-sm text-muted">Loading production entries…</div>
         ) : error ? (
           <div className="p-6 text-sm text-danger">{error}</div>
-        ) : purchases.length === 0 ? (
+        ) : entries.length === 0 ? (
           <EmptyState
-            icon={<IconCartDown className="h-6 w-6 text-brand-purple-2" />}
-            title="No purchases recorded"
-            description="Record your first raw material purchase — date, vendor and amount in INR."
+            icon={<IconSparkle className="h-6 w-6 text-brand-purple-2" />}
+            title="No production recorded"
+            description="Log a batch of finished products you've made — it adds straight to that product's stock, ready for Sales."
             action={
               <Button
                 size="sm"
@@ -108,27 +107,25 @@ export default function PurchasesPage() {
                   setFormOpen(true);
                 }}
               >
-                <IconPlus className="h-4 w-4" /> Record purchase
+                <IconPlus className="h-4 w-4" /> Record items made
               </Button>
             }
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Date</th>
-                  <th className="px-5 py-3 font-medium">Item</th>
-                  <th className="px-5 py-3 font-medium">Vendor</th>
-                  <th className="px-5 py-3 font-medium text-right">Qty</th>
-                  <th className="px-5 py-3 font-medium text-right">Rate</th>
-                  <th className="px-5 py-3 font-medium text-right">Amount</th>
-                  <th className="px-5 py-3 font-medium">Payment</th>
+                  <th className="px-5 py-3 font-medium">Product</th>
+                  <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium text-right">Qty made</th>
+                  <th className="px-5 py-3 font-medium">Notes</th>
                   <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {purchases.map((p) => (
+                {entries.map((p) => (
                   <tr
                     key={p.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
@@ -137,23 +134,17 @@ export default function PurchasesPage() {
                       {formatDate(p.date)}
                     </td>
                     <td className="px-5 py-3.5 font-medium">{p.item.name}</td>
-                    <td className="px-5 py-3.5">{p.vendor.name}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      {formatNumber(p.quantity)} {p.item.unit}
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-muted">
-                      {formatINR(p.rate)}
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-semibold">
-                      {formatINR(p.amount)}
-                    </td>
                     <td className="px-5 py-3.5">
-                      {p.paymentMode ? (
-                        <Badge tone="purple">{p.paymentMode}</Badge>
+                      {p.item.category ? (
+                        <Badge tone="gold">{p.item.category.name}</Badge>
                       ) : (
                         "—"
                       )}
                     </td>
+                    <td className="px-5 py-3.5 text-right font-semibold">
+                      {formatNumber(p.quantity)} {p.item.unit}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted">{p.notes || "—"}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1.5">
                         <button
@@ -183,19 +174,19 @@ export default function PurchasesPage() {
         )}
       </Card>
 
-      <PurchaseFormModal
+      <ProductionFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={refetch}
-        purchase={editing}
+        production={editing}
       />
 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Delete purchase entry?"
-        description={`This will permanently remove the ${deleting?.item.name} purchase from ${deleting?.vendor.name}.`}
+        title="Delete production entry?"
+        description={`This will remove ${deleting?.quantity} ${deleting?.item.unit} of "${deleting?.item.name}" from stock records.`}
         loading={deleteLoading}
       />
     </div>

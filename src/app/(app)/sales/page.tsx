@@ -10,45 +10,46 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Production } from "@/lib/types";
-import { formatDate, formatNumber } from "@/lib/format";
-import { IconPlus, IconEdit, IconTrash, IconSearch, IconSparkle } from "@/components/icons";
-import { ProductionFormModal } from "@/app/production/production-form";
+import type { Sale } from "@/lib/types";
+import { formatDate, formatINR, formatNumber } from "@/lib/format";
+import { IconPlus, IconEdit, IconTrash, IconSearch, IconTag } from "@/components/icons";
+import { SaleFormModal } from "@/app/(app)/sales/sale-form";
 
-export default function ProductionPage() {
-  const { data, loading, error, refetch } = useApi<Production[]>("/api/production");
+export default function SalesPage() {
+  const { data, loading, error, refetch } = useApi<Sale[]>("/api/sales");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Production | null>(null);
-  const [deleting, setDeleting] = useState<Production | null>(null);
+  const [editing, setEditing] = useState<Sale | null>(null);
+  const [deleting, setDeleting] = useState<Sale | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { push } = useToast();
 
-  const entries = useMemo(() => {
+  const sales = useMemo(() => {
     let list = data ?? [];
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       list = list.filter(
-        (p) =>
-          p.item.name.toLowerCase().includes(q) ||
-          (p.item.category?.name ?? "").toLowerCase().includes(q)
+        (s) =>
+          s.item.name.toLowerCase().includes(q) ||
+          s.customer.name.toLowerCase().includes(q) ||
+          (s.invoiceNumber ?? "").toLowerCase().includes(q)
       );
     }
     return list;
   }, [data, search]);
 
-  const totalQty = entries.reduce((sum, p) => sum + p.quantity, 0);
+  const total = sales.reduce((sum, s) => sum + s.amount, 0);
 
   async function handleDelete() {
     if (!deleting) return;
     setDeleteLoading(true);
     try {
-      await apiRequest(`/api/production/${deleting.id}`, { method: "DELETE" });
-      push("Production entry deleted");
+      await apiRequest(`/api/sales/${deleting.id}`, { method: "DELETE" });
+      push("Sale deleted");
       setDeleting(null);
       refetch();
     } catch (err) {
-      push(err instanceof Error ? err.message : "Could not delete production entry", "error");
+      push(err instanceof Error ? err.message : "Could not delete sale", "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -57,8 +58,8 @@ export default function ProductionPage() {
   return (
     <div>
       <PageHeader
-        title="Production"
-        description="Log the finished products you make — each entry adds to that product's available stock for sale."
+        title="Sales"
+        description="Sales of finished bracelets & accessories to customers."
         action={
           <Button
             onClick={() => {
@@ -66,7 +67,7 @@ export default function ProductionPage() {
               setFormOpen(true);
             }}
           >
-            <IconPlus className="h-4 w-4" /> Record items made
+            <IconPlus className="h-4 w-4" /> Record sale
           </Button>
         }
       />
@@ -75,30 +76,30 @@ export default function ProductionPage() {
         <div className="relative w-full sm:w-72">
           <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <Input
-            placeholder="Search product, category…"
+            placeholder="Search product, customer, invoice…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
           />
         </div>
-        {entries.length > 0 ? (
+        {sales.length > 0 ? (
           <p className="text-sm text-muted">
-            {entries.length} entries · Total made{" "}
-            <span className="font-semibold text-foreground">{formatNumber(totalQty)}</span>
+            {sales.length} entries · Total{" "}
+            <span className="font-semibold text-foreground">{formatINR(total)}</span>
           </p>
         ) : null}
       </div>
 
       <Card className="overflow-hidden">
         {loading ? (
-          <div className="p-6 text-sm text-muted">Loading production entries…</div>
+          <div className="p-6 text-sm text-muted">Loading sales…</div>
         ) : error ? (
           <div className="p-6 text-sm text-danger">{error}</div>
-        ) : entries.length === 0 ? (
+        ) : sales.length === 0 ? (
           <EmptyState
-            icon={<IconSparkle className="h-6 w-6 text-brand-purple-2" />}
-            title="No production recorded"
-            description="Log a batch of finished products you've made — it adds straight to that product's stock, ready for Sales."
+            icon={<IconTag className="h-6 w-6 text-brand-pink-2" />}
+            title="No sales recorded"
+            description="Record your first sale of a finished product — date, customer and amount in INR."
             action={
               <Button
                 size="sm"
@@ -107,49 +108,57 @@ export default function ProductionPage() {
                   setFormOpen(true);
                 }}
               >
-                <IconPlus className="h-4 w-4" /> Record items made
+                <IconPlus className="h-4 w-4" /> Record sale
               </Button>
             }
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 font-medium">Product</th>
-                  <th className="px-5 py-3 font-medium">Category</th>
-                  <th className="px-5 py-3 font-medium text-right">Qty made</th>
-                  <th className="px-5 py-3 font-medium">Notes</th>
+                  <th className="px-5 py-3 font-medium">Customer</th>
+                  <th className="px-5 py-3 font-medium text-right">Qty</th>
+                  <th className="px-5 py-3 font-medium text-right">Rate</th>
+                  <th className="px-5 py-3 font-medium text-right">Amount</th>
+                  <th className="px-5 py-3 font-medium">Payment</th>
                   <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {entries.map((p) => (
+                {sales.map((s) => (
                   <tr
-                    key={p.id}
+                    key={s.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
                     <td className="px-5 py-3.5 whitespace-nowrap text-muted">
-                      {formatDate(p.date)}
+                      {formatDate(s.date)}
                     </td>
-                    <td className="px-5 py-3.5 font-medium">{p.item.name}</td>
+                    <td className="px-5 py-3.5 font-medium">{s.item.name}</td>
+                    <td className="px-5 py-3.5">{s.customer.name}</td>
+                    <td className="px-5 py-3.5 text-right">
+                      {formatNumber(s.quantity)} {s.item.unit}
+                    </td>
+                    <td className="px-5 py-3.5 text-right text-muted">
+                      {formatINR(s.rate)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-semibold">
+                      {formatINR(s.amount)}
+                    </td>
                     <td className="px-5 py-3.5">
-                      {p.item.category ? (
-                        <Badge tone="gold">{p.item.category.name}</Badge>
+                      {s.paymentMode ? (
+                        <Badge tone="teal">{s.paymentMode}</Badge>
                       ) : (
                         "—"
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-right font-semibold">
-                      {formatNumber(p.quantity)} {p.item.unit}
-                    </td>
-                    <td className="px-5 py-3.5 text-muted">{p.notes || "—"}</td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => {
-                            setEditing(p);
+                            setEditing(s);
                             setFormOpen(true);
                           }}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
@@ -158,7 +167,7 @@ export default function ProductionPage() {
                           <IconEdit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => setDeleting(p)}
+                          onClick={() => setDeleting(s)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                           aria-label="Delete"
                         >
@@ -174,19 +183,19 @@ export default function ProductionPage() {
         )}
       </Card>
 
-      <ProductionFormModal
+      <SaleFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={refetch}
-        production={editing}
+        sale={editing}
       />
 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Delete production entry?"
-        description={`This will remove ${deleting?.quantity} ${deleting?.item.unit} of "${deleting?.item.name}" from stock records.`}
+        title="Delete sale entry?"
+        description={`This will permanently remove the ${deleting?.item.name} sale to ${deleting?.customer.name}.`}
         loading={deleteLoading}
       />
     </div>

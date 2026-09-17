@@ -4,10 +4,16 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
-import { navLinks, mobilePrimaryHrefs } from "@/components/layout/nav-links";
+import {
+  navLinks,
+  mobilePrimaryHrefs,
+  masterLinks,
+  reportLinks,
+} from "@/components/layout/nav-links";
 import { BrandWordmark } from "@/components/brand/logo-mark";
 import { IconDots, IconClose } from "@/components/icons";
 import { ThemeCustomizerButton } from "@/components/theme/theme-customizer";
+import { ProfileAvatarButton } from "@/components/auth/profile-menu";
 
 export function MobileTopBar() {
   return (
@@ -15,6 +21,7 @@ export function MobileTopBar() {
       <Link href="/">
         <BrandWordmark />
       </Link>
+      <ProfileAvatarButton />
     </header>
   );
 }
@@ -49,8 +56,11 @@ export function MobileTabBar() {
                 <IconClose className="h-4 w-4" />
               </button>
             </div>
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+              Masters
+            </p>
             <div className="grid grid-cols-4 gap-2">
-              {moreLinks.map((link) => {
+              {masterLinks.map((link) => {
                 const active = pathname?.startsWith(link.href);
                 const Icon = link.icon;
                 return (
@@ -59,7 +69,7 @@ export function MobileTabBar() {
                     href={link.href}
                     onClick={() => setMoreOpen(false)}
                     className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-xs font-medium transition-colors",
+                      "flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-center text-xs font-medium transition-colors",
                       active
                         ? "bg-[image:var(--gradient-brand-soft)] text-foreground"
                         : "text-muted hover:text-foreground"
@@ -71,7 +81,34 @@ export function MobileTabBar() {
                 );
               })}
             </div>
-            <div className="mt-3">
+
+            <p className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+              Insights
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {reportLinks.map((link) => {
+                const active = pathname?.startsWith(link.href);
+                const Icon = link.icon;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={() => setMoreOpen(false)}
+                    className={cn(
+                      "flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-center text-xs font-medium transition-colors",
+                      active
+                        ? "bg-[image:var(--gradient-brand-soft)] text-foreground"
+                        : "text-muted hover:text-foreground"
+                    )}
+                  >
+                    <Icon className="h-5 w-5" />
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </div>
+
+            <div className="mt-4">
               <ThemeCustomizerButton className="w-full justify-center" />
             </div>
           </div>

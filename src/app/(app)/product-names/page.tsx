@@ -9,29 +9,29 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Category } from "@/lib/types";
-import { IconPlus, IconEdit, IconTrash, IconTag } from "@/components/icons";
-import { CategoryFormModal } from "@/app/categories/category-form";
+import type { ProductName } from "@/lib/types";
+import { IconPlus, IconEdit, IconTrash, IconBox } from "@/components/icons";
+import { ProductNameFormModal } from "@/app/(app)/product-names/product-name-form";
 
-export default function CategoriesPage() {
-  const { data, loading, error, refetch } = useApi<Category[]>("/api/categories");
+export default function ProductNamesPage() {
+  const { data, loading, error, refetch } = useApi<ProductName[]>("/api/product-names");
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Category | null>(null);
-  const [deleting, setDeleting] = useState<Category | null>(null);
+  const [editing, setEditing] = useState<ProductName | null>(null);
+  const [deleting, setDeleting] = useState<ProductName | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const { push } = useToast();
-  const categories = data ?? [];
+  const productNames = data ?? [];
 
   async function handleDelete() {
     if (!deleting) return;
     setDeleteLoading(true);
     try {
-      await apiRequest(`/api/categories/${deleting.id}`, { method: "DELETE" });
-      push("Category deleted");
+      await apiRequest(`/api/product-names/${deleting.id}`, { method: "DELETE" });
+      push("Product name deleted");
       setDeleting(null);
       refetch();
     } catch (err) {
-      push(err instanceof Error ? err.message : "Could not delete category", "error");
+      push(err instanceof Error ? err.message : "Could not delete product name", "error");
     } finally {
       setDeleteLoading(false);
     }
@@ -40,8 +40,8 @@ export default function CategoriesPage() {
   return (
     <div>
       <PageHeader
-        title="Categories"
-        description="Audience/segment master for products — e.g. Kids, Adults, Male, Female. Each product can be tracked per category with its own stock."
+        title="Product Names"
+        description="Master list of finished products you make — e.g. Bracelet, Chain, Keychain, Bow. Selected when adding a product to Item Master."
         action={
           <Button
             onClick={() => {
@@ -49,7 +49,7 @@ export default function CategoriesPage() {
               setFormOpen(true);
             }}
           >
-            <IconPlus className="h-4 w-4" /> Add category
+            <IconPlus className="h-4 w-4" /> Add product name
           </Button>
         }
       />
@@ -59,11 +59,11 @@ export default function CategoriesPage() {
           <div className="p-6 text-sm text-muted">Loading…</div>
         ) : error ? (
           <div className="p-6 text-sm text-danger">{error}</div>
-        ) : categories.length === 0 ? (
+        ) : productNames.length === 0 ? (
           <EmptyState
-            icon={<IconTag className="h-6 w-6 text-brand-purple-2" />}
-            title="No categories yet"
-            description="Add categories like Kids, Adults, Male, Female — you'll be able to assign them to products in Item Master."
+            icon={<IconBox className="h-6 w-6 text-brand-purple-2" />}
+            title="No product names yet"
+            description="Add the finished products you make — Bracelet, Chain, Keychain, Bow — then use them in Item Master."
             action={
               <Button
                 size="sm"
@@ -72,7 +72,7 @@ export default function CategoriesPage() {
                   setFormOpen(true);
                 }}
               >
-                <IconPlus className="h-4 w-4" /> Add category
+                <IconPlus className="h-4 w-4" /> Add product name
               </Button>
             }
           />
@@ -82,23 +82,23 @@ export default function CategoriesPage() {
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 font-medium text-right">Products</th>
+                  <th className="px-5 py-3 font-medium text-right">Items using it</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {categories.map((c) => (
+                {productNames.map((p) => (
                   <tr
-                    key={c.id}
+                    key={p.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
-                    <td className="px-5 py-3.5 font-medium">{c.name}</td>
+                    <td className="px-5 py-3.5 font-medium">{p.name}</td>
                     <td className="px-5 py-3.5 text-right text-muted">
-                      {c._count?.items ?? 0}
+                      {p._count?.items ?? 0}
                     </td>
                     <td className="px-5 py-3.5">
-                      {c.isActive ? (
+                      {p.isActive ? (
                         <Badge tone="success">Active</Badge>
                       ) : (
                         <Badge tone="neutral">Inactive</Badge>
@@ -108,7 +108,7 @@ export default function CategoriesPage() {
                       <div className="flex justify-end gap-1.5">
                         <button
                           onClick={() => {
-                            setEditing(c);
+                            setEditing(p);
                             setFormOpen(true);
                           }}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
@@ -117,7 +117,7 @@ export default function CategoriesPage() {
                           <IconEdit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => setDeleting(c)}
+                          onClick={() => setDeleting(p)}
                           className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                           aria-label="Delete"
                         >
@@ -133,19 +133,19 @@ export default function CategoriesPage() {
         )}
       </Card>
 
-      <CategoryFormModal
+      <ProductNameFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSaved={refetch}
-        category={editing}
+        productName={editing}
       />
 
       <ConfirmDialog
         open={!!deleting}
         onClose={() => setDeleting(null)}
         onConfirm={handleDelete}
-        title="Delete category?"
-        description={`This will permanently remove "${deleting?.name}".`}
+        title="Delete product name?"
+        description={`This will permanently remove "${deleting?.name}" from the product name master.`}
         loading={deleteLoading}
       />
     </div>

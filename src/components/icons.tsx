@@ -187,3 +187,39 @@ export const IconClipboard = (props: SVGProps<SVGSVGElement>) => (
     <path d="M8 11h8M8 15h8M8 19h5" />
   </svg>
 );
+
+export const IconUser = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <circle cx="12" cy="8" r="4" />
+    <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+  </svg>
+);
+
+export const IconLock = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+    <path d="M7.5 10.5V7a4.5 4.5 0 0 1 9 0v3.5" />
+    <circle cx="12" cy="15" r="1.3" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+export const IconLogout = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <path d="M16 17l5-5-5-5" />
+    <path d="M21 12H9" />
+  </svg>
+);
+
+export const IconChevronDown = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <polyline points="6 9 12 15 18 9" />
+  </svg>
+);
+
+export const IconArrowLeft = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M19 12H5" />
+    <path d="M11 18l-6-6 6-6" />
+  </svg>
+);
