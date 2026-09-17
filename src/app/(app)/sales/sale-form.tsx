@@ -8,8 +8,8 @@ import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { todayInputValue, toDateInputValue, formatNumber } from "@/lib/format";
 import type { Customer, Item, Sale } from "@/lib/types";
+import { PAYMENT_MODES } from "@/lib/constants";
 
-const PAYMENT_MODES = ["Cash", "UPI", "Bank Transfer", "Card", "Other"];
 const NO_CATEGORY = "__none__";
 
 interface FormState {
@@ -89,7 +89,11 @@ function SaleFormBody({
   const { data: items } = useApi<Item[]>("/api/items?type=PRODUCT");
   const { data: customers } = useApi<Customer[]>("/api/customers");
   const [form, setForm] = useState<FormState>(() => initialState(sale));
-  const [amountTouched, setAmountTouched] = useState(!!sale);
+  // Always starts "untouched" (even when editing) so the Amount field keeps
+  // auto-recalculating from Quantity/Rate/Discount until the person types
+  // into it directly — otherwise editing an existing sale's quantity or
+  // rate silently left the old amount in place.
+  const [amountTouched, setAmountTouched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { push } = useToast();

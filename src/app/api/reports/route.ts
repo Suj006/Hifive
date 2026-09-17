@@ -8,6 +8,9 @@ export async function GET(request: NextRequest) {
     const from = params.get("from");
     const to = params.get("to");
     const categoryId = params.get("categoryId");
+    const vendorId = params.get("vendorId");
+    const customerId = params.get("customerId");
+    const paymentMode = params.get("paymentMode");
 
     const dateFilter = {
       gte: from ? new Date(from) : undefined,
@@ -20,11 +23,20 @@ export async function GET(request: NextRequest) {
 
     const [purchases, sales, productions, products] = await Promise.all([
       prisma.purchase.findMany({
-        where: { date: dateFilter },
+        where: {
+          date: dateFilter,
+          vendorId: vendorId ?? undefined,
+          paymentMode: paymentMode ?? undefined,
+        },
         include: { item: true, vendor: true },
       }),
       prisma.sale.findMany({
-        where: { date: dateFilter, item: productFilter },
+        where: {
+          date: dateFilter,
+          item: productFilter,
+          customerId: customerId ?? undefined,
+          paymentMode: paymentMode ?? undefined,
+        },
         include: { item: { include: { category: true } }, customer: true },
       }),
       prisma.production.findMany({

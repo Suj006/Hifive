@@ -125,6 +125,8 @@ export interface DashboardData {
     reorderLevel: number;
   }[];
   topProducts: { id: string; name: string; soldQty: number; soldAmount: number }[];
+  trend: { label: string; purchases: number; sales: number }[];
+  categoryBreakdown: { category: string; amount: number }[];
 }
 
 export interface ReportsData {

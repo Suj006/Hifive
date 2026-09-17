@@ -10,10 +10,12 @@ import { StatCard } from "@/components/ui/stat-card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
 import { useApi } from "@/lib/use-api";
-import type { Category, ReportsData } from "@/lib/types";
-import { formatDate, formatINR, formatNumber, toDateInputValue, todayInputValue } from "@/lib/format";
+import type { Category, Customer, ReportsData, Vendor } from "@/lib/types";
+import { formatDate, formatINR, formatNumber } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { exportNodeAsPng } from "@/lib/export-png";
+import { DATE_PRESETS, datePresetRange } from "@/lib/date-presets";
+import { PAYMENT_MODES } from "@/lib/constants";
 import {
   IconCartDown,
   IconRupee,
@@ -168,63 +170,47 @@ function ReportTable<T extends Record<string, unknown>>({
   );
 }
 
-function startOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-function endOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth() + 1, 0);
-}
-function startOfYear(d: Date) {
-  return new Date(d.getFullYear(), 0, 1);
-}
-
-const PRESETS = [
-  { key: "all", label: "All time" },
-  { key: "month", label: "This month" },
-  { key: "lastMonth", label: "Last month" },
-  { key: "year", label: "This year" },
-] as const;
-
-function presetRange(key: (typeof PRESETS)[number]["key"]): { from: string; to: string } {
-  const now = new Date();
-  if (key === "month") return { from: toDateInputValue(startOfMonth(now)), to: todayInputValue() };
-  if (key === "lastMonth") {
-    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    return { from: toDateInputValue(startOfMonth(lastMonth)), to: toDateInputValue(endOfMonth(lastMonth)) };
-  }
-  if (key === "year") return { from: toDateInputValue(startOfYear(now)), to: todayInputValue() };
-  return { from: "", to: "" };
-}
-
 export default function ReportsPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [vendorId, setVendorId] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [paymentMode, setPaymentMode] = useState("");
   const { push } = useToast();
   const reportBodyRef = useRef<HTMLDivElement>(null);
   const [pendingExport, setPendingExport] = useState<PendingExport | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const { data: categories } = useApi<Category[]>("/api/categories");
+  const { data: vendors } = useApi<Vendor[]>("/api/vendors");
+  const { data: customers } = useApi<Customer[]>("/api/customers");
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     if (categoryId) params.set("categoryId", categoryId);
+    if (vendorId) params.set("vendorId", vendorId);
+    if (customerId) params.set("customerId", customerId);
+    if (paymentMode) params.set("paymentMode", paymentMode);
     const qs = params.toString();
     return `/api/reports${qs ? `?${qs}` : ""}`;
-  }, [from, to, categoryId]);
+  }, [from, to, categoryId, vendorId, customerId, paymentMode]);
 
   const { data, loading, error } = useApi<ReportsData>(query);
 
-  const activePreset = PRESETS.find((p) => {
-    const r = presetRange(p.key);
+  const activePreset = DATE_PRESETS.find((p) => {
+    const r = datePresetRange(p.key);
     return r.from === from && r.to === to;
   })?.key;
 
   const categoryName = categories?.find((c) => c.id === categoryId)?.name;
-  const hasFilters = Boolean(from || to || categoryId);
+  const vendorName = vendors?.find((v) => v.id === vendorId)?.name;
+  const customerName = customers?.find((c) => c.id === customerId)?.name;
+  const hasFilters = Boolean(
+    from || to || categoryId || vendorId || customerId || paymentMode
+  );
 
   function requestExportPng(getNode: () => HTMLElement | null, title: string, filename: string) {
     setPendingExport({ getNode, title, filename });
@@ -276,18 +262,20 @@ export default function ReportsPage() {
             </div>
             <div>
               <CardTitle>Filters</CardTitle>
-              <p className="text-xs text-muted">Narrow the report by date range or product category</p>
+              <p className="text-xs text-muted">
+                Narrow the report by date, category, vendor, customer or payment mode
+              </p>
             </div>
           </div>
         </CardHeader>
         <CardContent className="pt-4">
           <div className="mb-4 flex flex-wrap gap-2">
-            {PRESETS.map((p) => (
+            {DATE_PRESETS.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 onClick={() => {
-                  const r = presetRange(p.key);
+                  const r = datePresetRange(p.key);
                   setFrom(r.from);
                   setTo(r.to);
                 }}
@@ -303,24 +291,54 @@ export default function ReportsPage() {
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:flex-wrap">
-            <Field label="From" className="w-full sm:w-48">
+            <Field label="From" className="w-full sm:w-40">
               <div className="relative">
                 <IconCalendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                 <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="pl-9" />
               </div>
             </Field>
-            <Field label="To" className="w-full sm:w-48">
+            <Field label="To" className="w-full sm:w-40">
               <div className="relative">
                 <IconCalendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
                 <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="pl-9" />
               </div>
             </Field>
-            <Field label="Category" className="w-full sm:w-56">
+            <Field label="Category" className="w-full sm:w-44">
               <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                 <option value="">All categories</option>
                 {categories?.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Vendor" className="w-full sm:w-44">
+              <Select value={vendorId} onChange={(e) => setVendorId(e.target.value)}>
+                <option value="">All vendors</option>
+                {vendors?.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Customer" className="w-full sm:w-44">
+              <Select value={customerId} onChange={(e) => setCustomerId(e.target.value)}>
+                <option value="">All customers</option>
+                {customers?.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Payment mode" className="w-full sm:w-40">
+              <Select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value)}>
+                <option value="">All modes</option>
+                {PAYMENT_MODES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
                   </option>
                 ))}
               </Select>
@@ -333,6 +351,9 @@ export default function ReportsPage() {
                   setFrom("");
                   setTo("");
                   setCategoryId("");
+                  setVendorId("");
+                  setCustomerId("");
+                  setPaymentMode("");
                 }}
               >
                 <IconClose className="h-4 w-4" /> Clear all
@@ -362,6 +383,30 @@ export default function ReportsPage() {
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
                   Category: {categoryName}
                   <button onClick={() => setCategoryId("")} className="text-muted hover:text-foreground cursor-pointer" aria-label="Remove category filter">
+                    <IconClose className="h-3 w-3" />
+                  </button>
+                </span>
+              ) : null}
+              {vendorName ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
+                  Vendor: {vendorName}
+                  <button onClick={() => setVendorId("")} className="text-muted hover:text-foreground cursor-pointer" aria-label="Remove vendor filter">
+                    <IconClose className="h-3 w-3" />
+                  </button>
+                </span>
+              ) : null}
+              {customerName ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
+                  Customer: {customerName}
+                  <button onClick={() => setCustomerId("")} className="text-muted hover:text-foreground cursor-pointer" aria-label="Remove customer filter">
+                    <IconClose className="h-3 w-3" />
+                  </button>
+                </span>
+              ) : null}
+              {paymentMode ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
+                  Payment: {paymentMode}
+                  <button onClick={() => setPaymentMode("")} className="text-muted hover:text-foreground cursor-pointer" aria-label="Remove payment mode filter">
                     <IconClose className="h-3 w-3" />
                   </button>
                 </span>
