@@ -7,11 +7,16 @@ export async function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const from = params.get("from");
     const to = params.get("to");
+    const categoryId = params.get("categoryId");
 
     const dateFilter = {
       gte: from ? new Date(from) : undefined,
       lte: to ? new Date(to) : undefined,
     };
+    // Categories are an audience/segment tag mainly used on finished products,
+    // so the filter only narrows the product-side sections below (sales,
+    // production, inventory) — raw material purchases are left untouched.
+    const productFilter = categoryId ? { categoryId } : {};
 
     const [purchases, sales, productions, products] = await Promise.all([
       prisma.purchase.findMany({
@@ -19,17 +24,18 @@ export async function GET(request: NextRequest) {
         include: { item: true, vendor: true },
       }),
       prisma.sale.findMany({
-        where: { date: dateFilter },
+        where: { date: dateFilter, item: productFilter },
         include: { item: { include: { category: true } }, customer: true },
       }),
       prisma.production.findMany({
-        where: { date: dateFilter },
+        where: { date: dateFilter, item: productFilter },
         include: { item: { include: { category: true } } },
       }),
-      // Full, un-filtered inventory picture: made/sold/remaining for every product,
-      // regardless of the date range above — a stock snapshot is always "as of now".
+      // Full inventory picture: made/sold/remaining for every product, as of
+      // now — only the category filter (not the date range) narrows this,
+      // since a stock snapshot always reflects the current moment.
       prisma.item.findMany({
-        where: { type: "PRODUCT" },
+        where: { type: "PRODUCT", ...productFilter },
         include: {
           category: true,
           productions: { select: { quantity: true } },

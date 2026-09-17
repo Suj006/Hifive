@@ -223,3 +223,35 @@ export const IconArrowLeft = (props: SVGProps<SVGSVGElement>) => (
     <path d="M11 18l-6-6 6-6" />
   </svg>
 );
+
+export const IconDownload = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M12 3v12" />
+    <path d="m7 10 5 5 5-5" />
+    <path d="M4 19.5h16" />
+  </svg>
+);
+
+export const IconImage = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <rect x="3" y="4" width="18" height="16" rx="2.5" />
+    <circle cx="8.5" cy="9.5" r="1.6" fill="currentColor" stroke="none" />
+    <path d="m4 17 5-5 3.5 3.5L17 11l3 3.5" />
+  </svg>
+);
+
+export const IconCalendar = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <rect x="3.5" y="5" width="17" height="16" rx="2.5" />
+    <path d="M8 3v4M16 3v4M3.5 10h17" />
+  </svg>
+);
+
+export const IconLayoutGrid = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <rect x="3.5" y="3.5" width="7.5" height="7.5" rx="1.8" />
+    <rect x="13" y="3.5" width="7.5" height="7.5" rx="1.8" />
+    <rect x="3.5" y="13" width="7.5" height="7.5" rx="1.8" />
+    <rect x="13" y="13" width="7.5" height="7.5" rx="1.8" />
+  </svg>
+);

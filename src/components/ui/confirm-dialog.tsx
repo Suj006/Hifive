@@ -10,6 +10,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Delete",
+  confirmVariant = "danger",
   loading,
 }: {
   open: boolean;
@@ -18,6 +19,7 @@ export function ConfirmDialog({
   title: string;
   description?: string;
   confirmLabel?: string;
+  confirmVariant?: "danger" | "primary";
   loading?: boolean;
 }) {
   return (
@@ -30,7 +32,7 @@ export function ConfirmDialog({
           Cancel
         </Button>
         <Button
-          variant="danger"
+          variant={confirmVariant}
           size="sm"
           onClick={onConfirm}
           disabled={loading}
