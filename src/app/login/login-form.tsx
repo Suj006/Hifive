@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { apiRequest } from "@/lib/use-api";
+import { primeSpeech } from "@/lib/nainu-sound";
 
 export function LoginForm() {
   const router = useRouter();
@@ -15,6 +16,10 @@ export function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // Unlocks speech synthesis for this document right within this real
+    // click, so Nainu's greeting on the dashboard a moment later is allowed
+    // to actually be audible.
+    primeSpeech();
     setLoading(true);
     setError(null);
     try {

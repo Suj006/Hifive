@@ -10,7 +10,6 @@ import { playPop, playClick, speakCartoon, stopSpeaking } from "@/lib/nainu-soun
 import { useApi } from "@/lib/use-api";
 import { cn } from "@/lib/cn";
 
-const SEEN_KEY = "hifive_nainu_seen_intro";
 // Safety net in case speech synthesis is unsupported/blocked and never fires
 // its "end" event — the farewell still closes on its own after this long.
 const FAREWELL_FALLBACK_MS = 6000;
@@ -22,57 +21,52 @@ const TONE_CHIP: Record<string, string> = {
   gold: "bg-brand-gold/15 text-brand-gold",
 };
 
-function hasSeenIntro(): boolean {
-  try {
-    return window.localStorage.getItem(SEEN_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markSeen() {
-  try {
-    window.localStorage.setItem(SEEN_KEY, "1");
-  } catch {
-    // ignore — localStorage may be unavailable (private mode, etc.)
-  }
-}
-
 // This component is loaded client-only (see the dynamic import in the
-// Dashboard page) since its initial open/closed state depends on
-// localStorage — there's no server-rendered version to hydrate against.
+// Dashboard page). Nainu greets on every visit to the Dashboard, not just
+// the first — there's no "seen before" state to hydrate against, so there's
+// nothing SSR-sensitive here either way.
 export function NainuGuide() {
-  const { data: me } = useApi<{ username: string }>("/api/auth/me");
+  const { data: me, loading: meLoading } = useApi<{ username: string }>("/api/auth/me");
   const steps = useMemo(() => buildNainuSteps(me?.username), [me?.username]);
 
-  const [open, setOpen] = useState(() => !hasSeenIntro());
+  const [open, setOpen] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
   const [talking, setTalking] = useState(false);
   const [showFarewell, setShowFarewell] = useState(false);
   const closeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const greetedRef = useRef(false);
 
   const step = steps[stepIndex];
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === steps.length - 1;
   const StepIcon = step.icon;
 
-  // Nainu speaks each step's text aloud as soon as it's shown — an
-  // external-system side effect (not setState), so it belongs directly in
-  // the effect body. Doesn't fire while the farewell is playing, since
-  // neither `open` nor `step` changes when closeGuide() starts it.
-  useEffect(() => {
-    if (!open || showFarewell) return;
-    speakCartoon(step.body, {
+  function speakStep(target: (typeof steps)[number]) {
+    speakCartoon(target.body, {
       onStart: () => setTalking(true),
       onEnd: () => setTalking(false),
     });
-    return () => stopSpeaking();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- showFarewell intentionally excluded: it only ever flips true from inside closeGuide(), which already takes over speech itself
-  }, [open, step]);
+  }
+
+  // Greets exactly once per real mount (i.e. once per visit to the
+  // Dashboard), and waits for the username fetch to settle first so the
+  // greeting reliably includes it. Guarded by a ref rather than relying on
+  // the effect running only once, because React Strict Mode deliberately
+  // double-invokes effects in development — without the guard, the greeting
+  // fires, gets cancelled by Strict Mode's synthetic cleanup, and
+  // immediately re-fires, which is a known source of the speech engine
+  // silently dropping the utterance.
+  useEffect(() => {
+    if (greetedRef.current || meLoading) return;
+    greetedRef.current = true;
+    speakStep(steps[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fires once meLoading settles (guarded above); steps[0] is read fresh, not stale
+  }, [meLoading]);
 
   useEffect(() => {
     return () => {
       if (closeTimeoutRef.current) clearTimeout(closeTimeoutRef.current);
+      stopSpeaking();
     };
   }, []);
 
@@ -81,7 +75,7 @@ export function NainuGuide() {
     setStepIndex(0);
     setShowFarewell(false);
     setOpen(true);
-    markSeen();
+    speakStep(steps[0]);
   }
 
   function finalizeClose() {
@@ -92,7 +86,6 @@ export function NainuGuide() {
     stopSpeaking();
     setOpen(false);
     setShowFarewell(false);
-    markSeen();
   }
 
   function closeGuide() {
@@ -116,12 +109,16 @@ export function NainuGuide() {
       closeGuide();
       return;
     }
-    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+    const nextIndex = Math.min(stepIndex + 1, steps.length - 1);
+    setStepIndex(nextIndex);
+    speakStep(steps[nextIndex]);
   }
 
   function goBack() {
     playClick();
-    setStepIndex((i) => Math.max(i - 1, 0));
+    const prevIndex = Math.max(stepIndex - 1, 0);
+    setStepIndex(prevIndex);
+    speakStep(steps[prevIndex]);
   }
 
   return (
@@ -181,7 +178,6 @@ export function NainuGuide() {
                 <div className="px-4 pt-3">
                   <Link
                     href={step.href}
-                    onClick={markSeen}
                     className="inline-flex items-center gap-1.5 rounded-lg border border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:brightness-110"
                   >
                     {step.cta} →

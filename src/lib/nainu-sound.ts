@@ -88,16 +88,22 @@ function pickCartoonVoice(): SpeechSynthesisVoice | undefined {
   );
 }
 
-/** Speaks `text` aloud in a bright, high-pitched "cartoon" voice. */
+/** Speaks `text` aloud in a bright, high-pitched, kid-like "cartoon" voice. */
 export function speakCartoon(
   text: string,
   handlers?: { onStart?: () => void; onEnd?: () => void }
 ) {
   if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
   try {
-    window.speechSynthesis.cancel();
+    // Only interrupt if something's actually mid-speech — calling cancel()
+    // immediately before speak() on an idle queue is a known source of
+    // flakiness in some Chromium builds where the new utterance silently
+    // never starts.
+    if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+      window.speechSynthesis.cancel();
+    }
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.pitch = 1.5;
+    utterance.pitch = 1.8;
     utterance.rate = 1.0;
     utterance.volume = 0.9;
     const voice = pickCartoonVoice();
@@ -116,5 +122,25 @@ export function stopSpeaking() {
     window.speechSynthesis.cancel();
   } catch {
     // ignore
+  }
+}
+
+/**
+ * Call from directly inside a real click/submit handler (e.g. the login
+ * button) to unlock speech synthesis for the rest of this document's
+ * lifetime. Some browsers only allow a document to produce audio once it
+ * has spoken from inside a genuine user gesture at least once — this
+ * silent, empty utterance satisfies that without being audible, so a later
+ * greeting spoken from an effect (e.g. right after navigating to the
+ * dashboard) is allowed to actually play.
+ */
+export function primeSpeech() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    const warmup = new SpeechSynthesisUtterance(" ");
+    warmup.volume = 0;
+    window.speechSynthesis.speak(warmup);
+  } catch {
+    // ignore — best-effort priming only
   }
 }

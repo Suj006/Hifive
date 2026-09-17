@@ -77,7 +77,7 @@ export function buildNainuSteps(username?: string | null): NainuStep[] {
   const who = username ? `, ${username}` : "";
   const introStep: NainuStep = {
     title: `${greeting}${who}! 👋`,
-    body: `I'm Nainu! I hope you're having a lovely day so far. Ready for a quick look around Hi Five by Jia?`,
+    body: `Hi, I'm Nainu! ${greeting}${who}! I hope you're having a lovely day. Ready for a quick look around Hi Five by Jia?`,
     icon: IconSparkle,
     tone: "purple",
   };
