@@ -19,6 +19,18 @@ export const categorySchema = z.object({
   isActive: z.coerce.boolean().default(true),
 });
 
+export const productNameSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(80),
+  isActive: z.coerce.boolean().default(true),
+});
+
+export const productionSchema = z.object({
+  date: z.coerce.date(),
+  itemId: z.string().min(1, "Product is required"),
+  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
 export const partySchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(120),
   phone: z

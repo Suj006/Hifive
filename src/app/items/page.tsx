@@ -130,15 +130,16 @@ export default function ItemsPage() {
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[860px] text-sm">
+            <table className="w-full min-w-[940px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Code</th>
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium">Type</th>
                   <th className="px-5 py-3 font-medium">Category</th>
+                  <th className="px-5 py-3 font-medium text-right">Made / Purchased</th>
+                  <th className="px-5 py-3 font-medium text-right">Sold</th>
                   <th className="px-5 py-3 font-medium text-right">Stock</th>
-                  <th className="px-5 py-3 font-medium text-right">Entries</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   <th className="px-5 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -172,6 +173,16 @@ export default function ItemsPage() {
                         "—"
                       )}
                     </td>
+                    <td className="px-5 py-3.5 text-right text-muted">
+                      {formatNumber(
+                        (item.type === "RAW_MATERIAL"
+                          ? item.purchasedQty
+                          : item.producedQty) ?? 0
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-right text-muted">
+                      {item.type === "PRODUCT" ? formatNumber(item.soldQty ?? 0) : "—"}
+                    </td>
                     <td className="px-5 py-3.5 text-right">
                       <span
                         className={
@@ -183,11 +194,6 @@ export default function ItemsPage() {
                       >
                         {formatNumber(item.stock ?? 0)} {item.unit}
                       </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-right text-muted">
-                      {item.type === "RAW_MATERIAL"
-                        ? item._count?.purchases ?? 0
-                        : item._count?.sales ?? 0}
                     </td>
                     <td className="px-5 py-3.5">
                       {item.isActive ? (

@@ -183,6 +183,22 @@ export default function ReportsPage() {
 
           <div className="flex flex-col gap-6">
             <ReportTable
+              title="Product inventory — made, sold & remaining (as of now)"
+              rows={data.productInventory}
+              csvName="product-inventory.csv"
+              emptyText="No products in the item master yet."
+              minWidth={640}
+              columns={[
+                { key: "code", label: "Code" },
+                { key: "name", label: "Product" },
+                { key: "category", label: "Category" },
+                { key: "made", label: "Made", align: "right", format: (v) => formatNumber(v as number) },
+                { key: "sold", label: "Sold", align: "right", format: (v) => formatNumber(v as number) },
+                { key: "remaining", label: "Remaining", align: "right", format: (v) => formatNumber(v as number) },
+              ]}
+            />
+
+            <ReportTable
               title="Item-wise purchases (raw materials)"
               rows={data.itemWisePurchases}
               csvName="item-wise-purchases.csv"
@@ -192,6 +208,20 @@ export default function ReportsPage() {
                 { key: "name", label: "Item" },
                 { key: "qty", label: "Qty purchased", align: "right", format: (v) => `${formatNumber(v as number)}` },
                 { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+              ]}
+            />
+
+            <ReportTable
+              title="Item-wise production (items made)"
+              rows={data.itemWiseProduction}
+              csvName="item-wise-production.csv"
+              emptyText="No production entries in this range."
+              minWidth={560}
+              columns={[
+                { key: "code", label: "Code" },
+                { key: "name", label: "Product" },
+                { key: "category", label: "Category" },
+                { key: "qty", label: "Qty made", align: "right", format: (v) => `${formatNumber(v as number)}` },
               ]}
             />
 

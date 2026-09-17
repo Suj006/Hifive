@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       lte: to ? new Date(to) : undefined,
     };
 
-    const [purchases, sales] = await Promise.all([
+    const [purchases, sales, productions, products] = await Promise.all([
       prisma.purchase.findMany({
         where: { date: dateFilter },
         include: { item: true, vendor: true },
@@ -21,6 +21,20 @@ export async function GET(request: NextRequest) {
       prisma.sale.findMany({
         where: { date: dateFilter },
         include: { item: { include: { category: true } }, customer: true },
+      }),
+      prisma.production.findMany({
+        where: { date: dateFilter },
+        include: { item: { include: { category: true } } },
+      }),
+      // Full, un-filtered inventory picture: made/sold/remaining for every product,
+      // regardless of the date range above — a stock snapshot is always "as of now".
+      prisma.item.findMany({
+        where: { type: "PRODUCT" },
+        include: {
+          category: true,
+          productions: { select: { quantity: true } },
+          sales: { select: { quantity: true } },
+        },
       }),
     ]);
 
@@ -124,6 +138,46 @@ export async function GET(request: NextRequest) {
     }
     const categoryWise = Array.from(categoryMap.values()).sort((a, b) => b.amount - a.amount);
 
+    // Item + category-wise production (items made)
+    const productionMap = new Map<
+      string,
+      { itemId: string; name: string; code: string; unit: string; category: string; qty: number }
+    >();
+    for (const p of productions) {
+      const entry = productionMap.get(p.itemId) ?? {
+        itemId: p.itemId,
+        name: p.item.name,
+        code: p.item.code,
+        unit: p.item.unit,
+        category: p.item.category?.name ?? "—",
+        qty: 0,
+      };
+      entry.qty += p.quantity;
+      productionMap.set(p.itemId, entry);
+    }
+    const itemWiseProduction = Array.from(productionMap.values()).sort(
+      (a, b) => b.qty - a.qty
+    );
+
+    // Full made/sold/remaining picture per product (not date-filtered)
+    const productInventory = products
+      .map((item) => {
+        const made = item.productions.reduce((s, p) => s + p.quantity, 0);
+        const sold = item.sales.reduce((s, sale) => s + sale.quantity, 0);
+        return {
+          itemId: item.id,
+          name: item.name,
+          code: item.code,
+          unit: item.unit,
+          category: item.category?.name ?? "—",
+          openingStock: item.openingStock,
+          made,
+          sold,
+          remaining: item.openingStock + made - sold,
+        };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+
     const totals = {
       purchaseAmount: purchases.reduce((s, p) => s + p.amount, 0),
       purchaseQty: purchases.reduce((s, p) => s + p.quantity, 0),
@@ -135,6 +189,8 @@ export async function GET(request: NextRequest) {
       totals,
       itemWisePurchases,
       itemWiseSales,
+      itemWiseProduction,
+      productInventory,
       vendorWise,
       customerWise,
       categoryWise,

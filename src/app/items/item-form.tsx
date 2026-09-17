@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Category, Item, ItemType } from "@/lib/types";
+import type { Category, Item, ItemType, ProductName } from "@/lib/types";
 import { UNIT_OPTIONS } from "@/lib/units";
 
 interface FormState {
@@ -100,6 +100,10 @@ function ItemFormBody({
   const activeCategories = (categories ?? []).filter(
     (c) => c.isActive || c.id === item?.categoryId
   );
+  const { data: productNames } = useApi<ProductName[]>("/api/product-names");
+  const activeProductNames = (productNames ?? []).filter(
+    (p) => p.isActive || p.name === item?.name
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -153,25 +157,57 @@ function ItemFormBody({
         </p>
       ) : null}
 
-      <Field label="Item name">
-        <Input
-          required
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="e.g. Silk Thread — Pink"
-        />
+      <Field label="Type">
+        <Select
+          value={form.type}
+          onChange={(e) =>
+            setForm({ ...form, type: e.target.value as ItemType, name: "" })
+          }
+        >
+          <option value="RAW_MATERIAL">Raw material</option>
+          <option value="PRODUCT">Finished product</option>
+        </Select>
       </Field>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Type">
+      {form.type === "PRODUCT" ? (
+        <Field
+          label="Product name"
+          hint={
+            activeProductNames.length === 0 ? (
+              <>
+                No product names yet —{" "}
+                <Link href="/product-names" className="underline">
+                  add one
+                </Link>
+              </>
+            ) : undefined
+          }
+        >
           <Select
-            value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value as ItemType })}
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
           >
-            <option value="RAW_MATERIAL">Raw material</option>
-            <option value="PRODUCT">Finished product</option>
+            <option value="">Select product</option>
+            {activeProductNames.map((p) => (
+              <option key={p.id} value={p.name}>
+                {p.name}
+              </option>
+            ))}
           </Select>
         </Field>
+      ) : (
+        <Field label="Item name">
+          <Input
+            required
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            placeholder="e.g. Silk Thread — Pink"
+          />
+        </Field>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
         <Field label="Unit">
           <Select value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
             {UNIT_OPTIONS.map((u) => (
@@ -182,18 +218,17 @@ function ItemFormBody({
             <option value="other">Other…</option>
           </Select>
         </Field>
+        {form.unit === "other" ? (
+          <Field label="Custom unit">
+            <Input
+              required
+              value={form.customUnit}
+              onChange={(e) => setForm({ ...form, customUnit: e.target.value })}
+              placeholder="e.g. bundle"
+            />
+          </Field>
+        ) : null}
       </div>
-
-      {form.unit === "other" ? (
-        <Field label="Custom unit">
-          <Input
-            required
-            value={form.customUnit}
-            onChange={(e) => setForm({ ...form, customUnit: e.target.value })}
-            placeholder="e.g. bundle"
-          />
-        </Field>
-      ) : null}
 
       {form.type === "PRODUCT" ? (
         <Field
@@ -232,7 +267,14 @@ function ItemFormBody({
       </Field>
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Opening stock">
+        <Field
+          label="Opening stock"
+          hint={
+            form.type === "PRODUCT"
+              ? "Stock already on hand, if any — record new batches in Production"
+              : undefined
+          }
+        >
           <Input
             type="number"
             min={0}

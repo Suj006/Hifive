@@ -7,13 +7,17 @@ import {
   IconTag,
   IconFilter,
   IconChart,
+  IconSparkle,
+  IconClipboard,
 } from "@/components/icons";
 
 export const navLinks = [
   { href: "/", label: "Dashboard", icon: IconDashboard },
   { href: "/items", label: "Item Master", icon: IconLayers },
   { href: "/purchases", label: "Purchases", icon: IconCartDown },
+  { href: "/production", label: "Production", icon: IconSparkle },
   { href: "/sales", label: "Sales", icon: IconTag },
+  { href: "/product-names", label: "Product Names", icon: IconClipboard },
   { href: "/categories", label: "Categories", icon: IconFilter },
   { href: "/vendors", label: "Vendors", icon: IconTruck },
   { href: "/customers", label: "Customers", icon: IconUsers },

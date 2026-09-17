@@ -26,6 +26,16 @@ model Category {
   items     Item[]
 }
 
+// Master list of finished-product names — e.g. Bracelet, Chain, Keychain, Bow.
+// Selected (not free-typed) when adding a PRODUCT item, so the same product
+// can't be entered under slightly different spellings.
+model ProductName {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
 model Item {
   id           String    @id @default(cuid())
   code         String    @unique // auto-generated, e.g. RM-0001 / PD-0001
@@ -46,6 +56,7 @@ model Item {
   updatedAt    DateTime  @updatedAt
   purchases    Purchase[]
   sales        Sale[]
+  productions  Production[]
 
   @@index([type])
   @@index([categoryId])
@@ -117,5 +128,22 @@ model Sale {
 
   @@index([itemId])
   @@index([customerId])
+  @@index([date])
+}
+
+// Production run: raw materials are turned into finished products. Each entry
+// adds to that product's available stock, the same way a Purchase adds to a
+// raw material's stock.
+model Production {
+  id        String   @id @default(cuid())
+  date      DateTime
+  itemId    String
+  item      Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  quantity  Float
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([itemId])
   @@index([date])
 }

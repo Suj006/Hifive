@@ -172,3 +172,18 @@ export const IconDots = (props: SVGProps<SVGSVGElement>) => (
     <circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none" />
   </svg>
 );
+
+export const IconSparkle = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+    <path d="M12 8.5a3.5 3.5 0 0 0 3.5 3.5 3.5 3.5 0 0 0-3.5 3.5 3.5 3.5 0 0 0-3.5-3.5A3.5 3.5 0 0 0 12 8.5Z" />
+  </svg>
+);
+
+export const IconClipboard = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <rect x="5" y="4" width="14" height="17" rx="2" />
+    <path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1" />
+    <path d="M8 11h8M8 15h8M8 19h5" />
+  </svg>
+);

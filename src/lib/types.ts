@@ -8,6 +8,14 @@ export interface Category {
   _count?: { items: number };
 }
 
+export interface ProductName {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  _count?: { items: number };
+}
+
 export interface Item {
   id: string;
   code: string;
@@ -23,10 +31,11 @@ export interface Item {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  _count?: { purchases: number; sales: number };
+  _count?: { purchases: number; sales: number; productions: number };
   stock?: number;
   purchasedQty?: number;
   soldQty?: number;
+  producedQty?: number;
 }
 
 export interface Vendor {
@@ -86,6 +95,16 @@ export interface Sale {
   createdAt: string;
 }
 
+export interface Production {
+  id: string;
+  date: string;
+  itemId: string;
+  item: Item;
+  quantity: number;
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface DashboardData {
   totals: {
     purchases: number;
@@ -135,4 +154,23 @@ export interface ReportsData {
   vendorWise: { vendorId: string; name: string; qty: number; amount: number; entries: number }[];
   customerWise: { customerId: string; name: string; qty: number; amount: number; entries: number }[];
   categoryWise: { category: string; qty: number; amount: number }[];
+  itemWiseProduction: {
+    itemId: string;
+    name: string;
+    code: string;
+    unit: string;
+    category: string;
+    qty: number;
+  }[];
+  productInventory: {
+    itemId: string;
+    name: string;
+    code: string;
+    unit: string;
+    category: string;
+    openingStock: number;
+    made: number;
+    sold: number;
+    remaining: number;
+  }[];
 }

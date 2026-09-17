@@ -15,6 +15,16 @@ export async function PUT(
     const categoryId = data.type === "PRODUCT" ? data.categoryId || null : null;
     const variantKey = computeVariantKey(data.name, data.type, categoryId);
 
+    if (data.type === "PRODUCT") {
+      const known = await prisma.productName.findUnique({ where: { name: data.name } });
+      if (!known) {
+        return jsonError(
+          "Please add this product to the Product Name master first.",
+          422
+        );
+      }
+    }
+
     const conflict = await prisma.item.findUnique({ where: { variantKey } });
     if (conflict && conflict.id !== id) {
       return jsonError(
@@ -53,9 +63,12 @@ export async function DELETE(
     const { id } = await params;
     const usage = await prisma.item.findUnique({
       where: { id },
-      select: { _count: { select: { purchases: true, sales: true } } },
+      select: { _count: { select: { purchases: true, sales: true, productions: true } } },
     });
-    if (usage && (usage._count.purchases > 0 || usage._count.sales > 0)) {
+    if (
+      usage &&
+      (usage._count.purchases > 0 || usage._count.sales > 0 || usage._count.productions > 0)
+    ) {
       return jsonError(
         "This item has purchase/sale entries linked to it. Mark it inactive instead of deleting.",
         409

@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 
-/** Current stock on hand for an item: opening + purchased (raw material) or opening - sold (product). */
+/** Current stock on hand for an item: opening + purchased (raw material) or opening + produced - sold (product). */
 export async function getItemStock(itemId: string): Promise<number | null> {
   const item = await prisma.item.findUnique({
     where: { id: itemId },
@@ -9,6 +9,7 @@ export async function getItemStock(itemId: string): Promise<number | null> {
       openingStock: true,
       purchases: { select: { quantity: true } },
       sales: { select: { quantity: true } },
+      productions: { select: { quantity: true } },
     },
   });
   if (!item) return null;
@@ -18,5 +19,6 @@ export async function getItemStock(itemId: string): Promise<number | null> {
     return item.openingStock + purchasedQty;
   }
   const soldQty = item.sales.reduce((s, sale) => s + sale.quantity, 0);
-  return item.openingStock - soldQty;
+  const producedQty = item.productions.reduce((s, p) => s + p.quantity, 0);
+  return item.openingStock + producedQty - soldQty;
 }

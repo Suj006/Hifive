@@ -54,6 +54,15 @@ async function main() {
   );
   const [kids, adults, unisex] = categories;
 
+  await Promise.all(
+    [
+      "Friendship Bracelet — Classic",
+      "Charm Bracelet — Heart",
+      "Beaded Name Bracelet",
+      "Beaded Keychain",
+    ].map((name) => prisma.productName.create({ data: { name } }))
+  );
+
   const rawMaterials = await Promise.all(
     [
       { name: "Silk Thread — Assorted", unit: "meter", group: "Thread", openingStock: 50, reorderLevel: 30 },
@@ -117,6 +126,25 @@ async function main() {
         amount,
         paymentMode: paymentModes[i % paymentModes.length],
         invoiceNumber: `PB-${1000 + i}`,
+      },
+    });
+  }
+
+  const productionSeed = [
+    { item: products[0], daysBack: 25, quantity: 5, notes: "Batch 1" },
+    { item: products[1], daysBack: 22, quantity: 3, notes: "Batch 1" },
+    { item: products[2], daysBack: 18, quantity: 2, notes: "Batch 1" },
+    { item: products[3], daysBack: 24, quantity: 6, notes: "Batch 1" },
+    { item: products[4], daysBack: 16, quantity: 10, notes: "Batch 1" },
+  ];
+
+  for (const p of productionSeed) {
+    await prisma.production.create({
+      data: {
+        date: daysAgo(p.daysBack),
+        itemId: p.item.id,
+        quantity: p.quantity,
+        notes: p.notes,
       },
     });
   }
