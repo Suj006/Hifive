@@ -4,17 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/cn";
 import { navLinks } from "@/components/layout/nav-links";
+import { BrandWordmark } from "@/components/brand/logo-mark";
 
 export function MobileTopBar() {
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border bg-background/85 px-4 py-3 backdrop-blur lg:hidden">
-      <Link href="/" className="flex items-center gap-2">
-        <span className="font-display text-base font-extrabold brand-text">
-          Hi Five
-        </span>
-        <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted">
-          by Jia
-        </span>
+      <Link href="/">
+        <BrandWordmark />
       </Link>
     </header>
   );
