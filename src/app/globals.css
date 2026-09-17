@@ -1,0 +1,113 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b0b14;
+  --surface: #14141f;
+  --surface-2: #1a1a28;
+  --border: #262638;
+  --foreground: #f5f4fb;
+  --muted: #9a97b3;
+
+  /* Hi Five by Jia brand palette (from logo) */
+  --brand-pink: #ec1876;
+  --brand-pink-2: #ff4f9a;
+  --brand-purple: #7b2ff7;
+  --brand-purple-2: #a566ff;
+  --brand-teal: #14c7d6;
+  --brand-gold: #ffb800;
+
+  --gradient-brand: linear-gradient(
+    135deg,
+    var(--brand-pink) 0%,
+    var(--brand-purple) 55%,
+    var(--brand-teal) 100%
+  );
+  --gradient-brand-soft: linear-gradient(
+    135deg,
+    rgba(236, 24, 118, 0.18) 0%,
+    rgba(123, 47, 247, 0.16) 55%,
+    rgba(20, 199, 214, 0.14) 100%
+  );
+
+  --success: #2fd681;
+  --danger: #ff5470;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-pink-2: var(--brand-pink-2);
+  --color-brand-purple: var(--brand-purple);
+  --color-brand-purple-2: var(--brand-purple-2);
+  --color-brand-teal: var(--brand-teal);
+  --color-brand-gold: var(--brand-gold);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-heading);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: radial-gradient(
+      circle at 12% -10%,
+      rgba(123, 47, 247, 0.25),
+      transparent 40%
+    ),
+    radial-gradient(circle at 90% 0%, rgba(236, 24, 118, 0.18), transparent 45%),
+    var(--background);
+  color: var(--foreground);
+  min-height: 100dvh;
+}
+
+::selection {
+  background: var(--brand-pink);
+  color: white;
+}
+
+* {
+  border-color: var(--border);
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
+}
+
+.glass-card {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.02)
+  );
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+}
+
+.brand-text {
+  background: var(--gradient-brand);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}

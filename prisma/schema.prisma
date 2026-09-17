@@ -1,0 +1,103 @@
+// Prisma schema for Hi Five by Jia — raw material purchase & product sale ledger
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ItemType {
+  RAW_MATERIAL
+  PRODUCT
+}
+
+model Item {
+  id            String     @id @default(cuid())
+  name          String
+  type          ItemType
+  unit          String // e.g. pcs, gm, meter, box
+  category      String? // e.g. Beads, Thread, Charms, Bracelet, Keychain
+  openingStock  Float      @default(0)
+  reorderLevel  Float      @default(0)
+  notes         String?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  purchases     Purchase[]
+  sales         Sale[]
+
+  @@index([type])
+}
+
+model Vendor {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  isActive  Boolean    @default(true)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  purchases Purchase[]
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sales     Sale[]
+}
+
+model Purchase {
+  id            String   @id @default(cuid())
+  date          DateTime
+  itemId        String
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  vendorId      String
+  vendor        Vendor   @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  quantity      Float
+  rate          Float // per unit rate in INR
+  amount        Float // quantity * rate (+ any adjustment), stored for auditability
+  invoiceNumber String?
+  paymentMode   String? // Cash, UPI, Bank Transfer, Card
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([vendorId])
+  @@index([date])
+}
+
+model Sale {
+  id            String   @id @default(cuid())
+  date          DateTime
+  itemId        String
+  item          Item     @relation(fields: [itemId], references: [id], onDelete: Restrict)
+  customerId    String
+  customer      Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  quantity      Float
+  rate          Float // per unit selling price in INR
+  amount        Float // quantity * rate (+ any adjustment), stored for auditability
+  discount      Float    @default(0)
+  invoiceNumber String?
+  paymentMode   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([itemId])
+  @@index([customerId])
+  @@index([date])
+}
