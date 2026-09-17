@@ -1,6 +1,8 @@
-// Tiny synthesized "cartoon voice" sound effects for Nainu, generated in-browser
-// via the Web Audio API — no external audio files needed. Browsers block audio
-// until a user gesture unlocks the AudioContext, so every call here is best-effort
+// Nainu's voice and UI sound effects — no external audio files needed.
+// Speech uses the browser's built-in Web Speech API (speechSynthesis), tuned
+// with a higher pitch and peppy rate for a cartoonic delivery. The pop/click
+// cues are tiny synthesized tones via the Web Audio API. Browsers restrict
+// both until a user gesture unlocks them, so every call here is best-effort
 // and silently no-ops until that happens (e.g. the first click on the guide).
 
 let ctx: AudioContext | null = null;
@@ -40,17 +42,6 @@ function tone(
   osc.stop(now + duration + 0.02);
 }
 
-export function playBlip() {
-  const audioCtx = getContext();
-  if (!audioCtx) return;
-  try {
-    const base = 480 + Math.random() * 220;
-    tone(audioCtx, { type: "sine", startFreq: base, endFreq: base * 0.72, duration: 0.07, gain: 0.06 });
-  } catch {
-    // ignore — audio is a nice-to-have, never block the UI on it
-  }
-}
-
 export function playPop() {
   const audioCtx = getContext();
   if (!audioCtx) return;
@@ -66,6 +57,62 @@ export function playClick() {
   if (!audioCtx) return;
   try {
     tone(audioCtx, { type: "square", startFreq: 680, endFreq: 640, duration: 0.05, gain: 0.045 });
+  } catch {
+    // ignore
+  }
+}
+
+let cachedVoices: SpeechSynthesisVoice[] = [];
+
+function ensureVoicesLoaded() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  cachedVoices = window.speechSynthesis.getVoices();
+  if (!cachedVoices.length) {
+    window.speechSynthesis.addEventListener(
+      "voiceschanged",
+      () => {
+        cachedVoices = window.speechSynthesis.getVoices();
+      },
+      { once: true }
+    );
+  }
+}
+
+function pickCartoonVoice(): SpeechSynthesisVoice | undefined {
+  if (!cachedVoices.length) ensureVoicesLoaded();
+  return (
+    cachedVoices.find((v) => /female|zira|samantha|victoria|karen|jenny|aria/i.test(v.name)) ??
+    cachedVoices.find((v) => v.lang.toLowerCase().startsWith("en")) ??
+    cachedVoices[0]
+  );
+}
+
+/** Speaks `text` aloud in a bright, high-pitched "cartoon" voice. */
+export function speakCartoon(
+  text: string,
+  handlers?: { onStart?: () => void; onEnd?: () => void }
+) {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.pitch = 1.7;
+    utterance.rate = 1.08;
+    utterance.volume = 0.9;
+    const voice = pickCartoonVoice();
+    if (voice) utterance.voice = voice;
+    if (handlers?.onStart) utterance.onstart = handlers.onStart;
+    if (handlers?.onEnd) utterance.onend = handlers.onEnd;
+    window.speechSynthesis.speak(utterance);
+  } catch {
+    // ignore — speech synthesis is a nice-to-have, never block the UI on it
+  }
+}
+
+export function stopSpeaking() {
+  if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+  try {
+    window.speechSynthesis.cancel();
   } catch {
     // ignore
   }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { NainuCharacter } from "@/components/nainu/nainu-character";
 import { TypewriterText } from "@/components/nainu/typewriter-text";
 import { nainuSteps } from "@/components/nainu/steps";
 import { IconClose, IconArrowLeft } from "@/components/icons";
-import { playBlip, playPop, playClick } from "@/lib/nainu-sound";
+import { playPop, playClick, speakCartoon, stopSpeaking } from "@/lib/nainu-sound";
 import { cn } from "@/lib/cn";
 
 const SEEN_KEY = "hifive_nainu_seen_intro";
@@ -40,23 +40,35 @@ function markSeen() {
 export function NainuGuide() {
   const [open, setOpen] = useState(() => !hasSeenIntro());
   const [stepIndex, setStepIndex] = useState(0);
-  const [talking, setTalking] = useState(true);
+  const [talking, setTalking] = useState(false);
 
   const step = nainuSteps[stepIndex];
   const isFirst = stepIndex === 0;
   const isLast = stepIndex === nainuSteps.length - 1;
   const StepIcon = step.icon;
 
+  // Nainu speaks each step's text aloud (in a cartoonic voice) as soon as
+  // it's shown — this is an external-system side effect (not setState), so
+  // it belongs directly in the effect body, unlike a state reset.
+  useEffect(() => {
+    if (!open) return;
+    speakCartoon(step.body, {
+      onStart: () => setTalking(true),
+      onEnd: () => setTalking(false),
+    });
+    return () => stopSpeaking();
+  }, [open, step]);
+
   function openGuide() {
     playPop();
     setStepIndex(0);
-    setTalking(true);
     setOpen(true);
     markSeen();
   }
 
   function closeGuide() {
     playClick();
+    stopSpeaking();
     setOpen(false);
     markSeen();
   }
@@ -68,13 +80,11 @@ export function NainuGuide() {
       return;
     }
     setStepIndex((i) => Math.min(i + 1, nainuSteps.length - 1));
-    setTalking(true);
   }
 
   function goBack() {
     playClick();
     setStepIndex((i) => Math.max(i - 1, 0));
-    setTalking(true);
   }
 
   return (
@@ -111,8 +121,6 @@ export function NainuGuide() {
               <TypewriterText
                 key={stepIndex}
                 text={step.body}
-                onBlip={playBlip}
-                onDone={() => setTalking(false)}
                 className="text-sm leading-relaxed text-muted"
               />
             </div>

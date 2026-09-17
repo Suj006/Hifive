@@ -5,13 +5,11 @@ import { useEffect, useState } from "react";
 export function TypewriterText({
   text,
   speed = 20,
-  onBlip,
   onDone,
   className,
 }: {
   text: string;
   speed?: number;
-  onBlip?: () => void;
   onDone?: () => void;
   className?: string;
 }) {
@@ -23,7 +21,6 @@ export function TypewriterText({
     const id = setInterval(() => {
       i += 1;
       setShown(text.slice(0, i));
-      if (i % 2 === 0) onBlip?.();
       if (i >= text.length) {
         clearInterval(id);
         setFinished(true);
@@ -31,7 +28,7 @@ export function TypewriterText({
       }
     }, speed);
     return () => clearInterval(id);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onBlip/onDone are stable enough for this cosmetic effect; re-running per text change is what matters
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- onDone is stable enough for this cosmetic effect; re-running per text change is what matters
   }, [text, speed]);
 
   return (
