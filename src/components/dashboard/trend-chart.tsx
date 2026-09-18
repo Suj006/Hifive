@@ -19,6 +19,7 @@ import { formatINR } from "@/lib/format";
 // surface — the raw brand teal/gold are too light for thin chart marks).
 const CHART_PURPLE = "#a566ff";
 const CHART_PINK = "#ec1876";
+const CHART_GOLD = "#b8790a";
 
 function TrendTooltip({
   active,
@@ -49,7 +50,7 @@ function TrendTooltip({
 export function TrendChart({
   data,
 }: {
-  data: { label: string; purchases: number; sales: number }[];
+  data: { label: string; purchases: number; sales: number; expenses: number }[];
 }) {
   if (data.length === 0) {
     return (
@@ -103,6 +104,15 @@ export function TrendChart({
             stroke={CHART_PINK}
             strokeWidth={2}
             dot={{ r: 3, fill: CHART_PINK, strokeWidth: 0 }}
+            activeDot={{ r: 5 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="expenses"
+            name="Expenses"
+            stroke={CHART_GOLD}
+            strokeWidth={2}
+            dot={{ r: 3, fill: CHART_GOLD, strokeWidth: 0 }}
             activeDot={{ r: 5 }}
           />
         </LineChart>

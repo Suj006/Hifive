@@ -57,8 +57,10 @@ export async function GET(request: NextRequest) {
     const [
       purchases,
       sales,
+      expenses,
       purchaseAggMonth,
       saleAggMonth,
+      expenseAggMonth,
       itemCount,
       vendorCount,
       customerCount,
@@ -74,11 +76,16 @@ export async function GET(request: NextRequest) {
         include: { item: { include: { category: true } }, customer: true },
         orderBy: { date: "desc" },
       }),
+      prisma.expense.findMany({ where: { date: dateFilter } }),
       prisma.purchase.aggregate({
         _sum: { amount: true },
         where: { date: { gte: monthStart } },
       }),
       prisma.sale.aggregate({
+        _sum: { amount: true },
+        where: { date: { gte: monthStart } },
+      }),
+      prisma.expense.aggregate({
         _sum: { amount: true },
         where: { date: { gte: monthStart } },
       }),
@@ -93,6 +100,7 @@ export async function GET(request: NextRequest) {
 
     const totalPurchases = purchases.reduce((s, p) => s + p.amount, 0);
     const totalSales = sales.reduce((s, sale) => s + sale.amount, 0);
+    const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
     const totalPurchaseQty = purchases.reduce((s, p) => s + p.quantity, 0);
     const totalSaleQty = sales.reduce((s, sale) => s + sale.quantity, 0);
 
@@ -104,7 +112,7 @@ export async function GET(request: NextRequest) {
     // readable rather than spanning the business's entire history.
     const trendMap = new Map<
       string,
-      { sortKey: string; label: string; purchases: number; sales: number }
+      { sortKey: string; label: string; purchases: number; sales: number; expenses: number }
     >();
     function touch(date: Date) {
       const key = useDaily ? dayKey(date) : monthKey(date);
@@ -114,6 +122,7 @@ export async function GET(request: NextRequest) {
           label: useDaily ? dayLabel(date) : monthLabel(date),
           purchases: 0,
           sales: 0,
+          expenses: 0,
         });
       }
       return trendMap.get(key)!;
@@ -138,6 +147,7 @@ export async function GET(request: NextRequest) {
     }
     for (const p of purchases) touch(new Date(p.date)).purchases += p.amount;
     for (const s of sales) touch(new Date(s.date)).sales += s.amount;
+    for (const e of expenses) touch(new Date(e.date)).expenses += e.amount;
 
     let trendEntries = Array.from(trendMap.values()).sort((a, b) =>
       a.sortKey.localeCompare(b.sortKey)
@@ -145,10 +155,11 @@ export async function GET(request: NextRequest) {
     if (!explicitRange && !useDaily) {
       trendEntries = trendEntries.slice(-6);
     }
-    const trend = trendEntries.map(({ label, purchases: p, sales: s }) => ({
+    const trend = trendEntries.map(({ label, purchases: p, sales: s, expenses: e }) => ({
       label,
       purchases: p,
       sales: s,
+      expenses: e,
     }));
 
     // Category-wise sales, for the "sales by category" chart.
@@ -201,13 +212,15 @@ export async function GET(request: NextRequest) {
       totals: {
         purchases: totalPurchases,
         sales: totalSales,
-        profit: totalSales - totalPurchases,
+        expenses: totalExpenses,
+        profit: totalSales - totalPurchases - totalExpenses,
         purchaseQty: totalPurchaseQty,
         saleQty: totalSaleQty,
       },
       month: {
         purchases: purchaseAggMonth._sum.amount ?? 0,
         sales: saleAggMonth._sum.amount ?? 0,
+        expenses: expenseAggMonth._sum.amount ?? 0,
       },
       counts: {
         items: itemCount,

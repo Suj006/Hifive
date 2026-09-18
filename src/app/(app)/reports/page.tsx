@@ -30,6 +30,7 @@ import {
   IconImage,
   IconCalendar,
   IconClose,
+  IconWallet,
 } from "@/components/icons";
 
 type Tone = "pink" | "purple" | "teal" | "gold";
@@ -429,7 +430,7 @@ export default function ReportsPage() {
         </div>
       ) : (
         <div ref={reportBodyRef}>
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard
               label="Purchases"
               value={formatINR(data.totals.purchaseAmount)}
@@ -445,8 +446,16 @@ export default function ReportsPage() {
               sub={`${formatNumber(data.totals.saleQty)} units`}
             />
             <StatCard
+              label="Expenses"
+              value={formatINR(data.totals.expenseAmount)}
+              icon={<IconWallet className="h-5 w-5" />}
+              accent="gold"
+            />
+            <StatCard
               label="Net"
-              value={formatINR(data.totals.saleAmount - data.totals.purchaseAmount)}
+              value={formatINR(
+                data.totals.saleAmount - data.totals.purchaseAmount - data.totals.expenseAmount
+              )}
               icon={<IconChart className="h-5 w-5" />}
               accent="teal"
             />
@@ -586,6 +595,24 @@ export default function ReportsPage() {
               columns={[
                 { key: "category", label: "Category" },
                 { key: "qty", label: "Qty sold", align: "right", format: (v) => `${formatNumber(v as number)}` },
+                { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+              ]}
+            />
+
+            <ReportTable
+              title="Expenses by category"
+              icon={<IconWallet className="h-5 w-5" />}
+              tone="gold"
+              rows={data.expenseWise}
+              csvName="expenses-by-category.csv"
+              pngName="expenses-by-category.png"
+              countLabel="categories"
+              emptyText="No expenses in this range."
+              minWidth={420}
+              onExportPngRequest={requestExportPng}
+              columns={[
+                { key: "category", label: "Category" },
+                { key: "entries", label: "Entries", align: "right" },
                 { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
               ]}
             />

@@ -103,6 +103,17 @@ export interface Sale {
   createdAt: string;
 }
 
+export interface Expense {
+  id: string;
+  date: string;
+  category: string;
+  description: string;
+  amount: number;
+  paymentMode: string | null;
+  notes: string | null;
+  createdAt: string;
+}
+
 export interface Production {
   id: string;
   date: string;
@@ -117,11 +128,12 @@ export interface DashboardData {
   totals: {
     purchases: number;
     sales: number;
+    expenses: number;
     profit: number;
     purchaseQty: number;
     saleQty: number;
   };
-  month: { purchases: number; sales: number };
+  month: { purchases: number; sales: number; expenses: number };
   counts: { items: number; vendors: number; customers: number };
   recentPurchases: Purchase[];
   recentSales: Sale[];
@@ -133,7 +145,7 @@ export interface DashboardData {
     reorderLevel: number;
   }[];
   topProducts: { id: string; name: string; soldQty: number; soldAmount: number }[];
-  trend: { label: string; purchases: number; sales: number }[];
+  trend: { label: string; purchases: number; sales: number; expenses: number }[];
   categoryBreakdown: { category: string; amount: number }[];
 }
 
@@ -143,6 +155,7 @@ export interface ReportsData {
     purchaseQty: number;
     saleAmount: number;
     saleQty: number;
+    expenseAmount: number;
   };
   itemWisePurchases: {
     itemId: string;
@@ -164,6 +177,7 @@ export interface ReportsData {
   vendorWise: { vendorId: string; name: string; qty: number; amount: number; entries: number }[];
   customerWise: { customerId: string; name: string; qty: number; amount: number; entries: number }[];
   categoryWise: { category: string; qty: number; amount: number }[];
+  expenseWise: { category: string; amount: number; entries: number }[];
   itemWiseProduction: {
     itemId: string;
     name: string;

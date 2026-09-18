@@ -145,6 +145,24 @@ model Sale {
   @@index([date])
 }
 
+// Any spend that isn't a raw material purchase — packaging, shipping, rent,
+// tools, marketing… — so Net Profit on the Dashboard reflects real running
+// costs, not just purchases vs sales.
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime
+  category    String
+  description String
+  amount      Float
+  paymentMode String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([date])
+  @@index([category])
+}
+
 // Production run: raw materials are turned into finished products. Each entry
 // adds to that product's available stock, the same way a Purchase adds to a
 // raw material's stock.

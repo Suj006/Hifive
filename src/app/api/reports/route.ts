@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     // production, inventory) — raw material purchases are left untouched.
     const productFilter = categoryId ? { categoryId } : {};
 
-    const [purchases, sales, productions, products] = await Promise.all([
+    const [purchases, sales, expenses, productions, products] = await Promise.all([
       prisma.purchase.findMany({
         where: {
           date: dateFilter,
@@ -38,6 +38,11 @@ export async function GET(request: NextRequest) {
           paymentMode: paymentMode ?? undefined,
         },
         include: { item: { include: { category: true } }, customer: true },
+      }),
+      // Expense categories are a free-text business-cost tag, unrelated to
+      // the product audience Category master, so only date/payment narrow it.
+      prisma.expense.findMany({
+        where: { date: dateFilter, paymentMode: paymentMode ?? undefined },
       }),
       prisma.production.findMany({
         where: { date: dateFilter, item: productFilter },
@@ -156,6 +161,16 @@ export async function GET(request: NextRequest) {
     }
     const categoryWise = Array.from(categoryMap.values()).sort((a, b) => b.amount - a.amount);
 
+    // Expense-wise breakdown (by category)
+    const expenseMap = new Map<string, { category: string; amount: number; entries: number }>();
+    for (const e of expenses) {
+      const entry = expenseMap.get(e.category) ?? { category: e.category, amount: 0, entries: 0 };
+      entry.amount += e.amount;
+      entry.entries += 1;
+      expenseMap.set(e.category, entry);
+    }
+    const expenseWise = Array.from(expenseMap.values()).sort((a, b) => b.amount - a.amount);
+
     // Item + category-wise production (items made)
     const productionMap = new Map<
       string,
@@ -201,6 +216,7 @@ export async function GET(request: NextRequest) {
       purchaseQty: purchases.reduce((s, p) => s + p.quantity, 0),
       saleAmount: sales.reduce((s, sale) => s + sale.amount, 0),
       saleQty: sales.reduce((s, sale) => s + sale.quantity, 0),
+      expenseAmount: expenses.reduce((s, e) => s + e.amount, 0),
     };
 
     return NextResponse.json({
@@ -212,6 +228,7 @@ export async function GET(request: NextRequest) {
       vendorWise,
       customerWise,
       categoryWise,
+      expenseWise,
     });
   });
 }

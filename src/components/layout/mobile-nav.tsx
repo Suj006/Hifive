@@ -8,6 +8,7 @@ import {
   navLinks,
   mobilePrimaryHrefs,
   masterLinks,
+  transactionLinks,
   reportLinks,
   adminLinks,
 } from "@/components/layout/nav-links";
@@ -38,6 +39,12 @@ export function MobileTabBar() {
   const moreLinks = navLinks.filter(
     (l) => !(mobilePrimaryHrefs as readonly string[]).includes(l.href)
   );
+  // Transaction links (Purchases, Production, Sales) are mostly pinned to
+  // the primary tab bar directly — anything added later (like Expenses)
+  // that isn't in mobilePrimaryHrefs still needs a home in the sheet.
+  const moreTransactionLinks = transactionLinks.filter(
+    (l) => !(mobilePrimaryHrefs as readonly string[]).includes(l.href)
+  );
   const moreActive =
     moreLinks.some((l) => pathname?.startsWith(l.href)) ||
     (isAdmin && adminLinks.some((l) => pathname?.startsWith(l.href)));
@@ -61,6 +68,36 @@ export function MobileTabBar() {
                 <IconClose className="h-4 w-4" />
               </button>
             </div>
+            {moreTransactionLinks.length > 0 ? (
+              <>
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Transactions
+                </p>
+                <div className="mb-4 grid grid-cols-4 gap-2">
+                  {moreTransactionLinks.map((link) => {
+                    const active = pathname?.startsWith(link.href);
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-center text-xs font-medium transition-colors",
+                          active
+                            ? "bg-[image:var(--gradient-brand-soft)] text-foreground"
+                            : "text-muted hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
+
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
               Masters
             </p>

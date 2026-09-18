@@ -86,6 +86,15 @@ export const purchaseSchema = z.object({
   notes: z.string().trim().max(500).optional().or(z.literal("")),
 });
 
+export const expenseSchema = z.object({
+  date: z.coerce.date(),
+  category: z.string().trim().min(1, "Category is required").max(60),
+  description: z.string().trim().min(1, "Description is required").max(200),
+  amount: z.coerce.number().positive("Amount must be greater than 0"),
+  paymentMode: z.string().trim().max(30).optional().or(z.literal("")),
+  notes: z.string().trim().max(500).optional().or(z.literal("")),
+});
+
 export const saleSchema = z.object({
   date: z.coerce.date(),
   itemId: z.string().min(1, "Product is required"),

@@ -192,7 +192,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard
               label="Total Purchases"
               value={formatINR(data.totals.purchases)}
@@ -208,14 +208,21 @@ export default function DashboardPage() {
               sub={`This month: ${formatINR(data.month.sales)}`}
             />
             <StatCard
+              label="Total Expenses"
+              value={formatINR(data.totals.expenses)}
+              icon={<IconWallet className="h-5 w-5" />}
+              accent="gold"
+              sub={`This month: ${formatINR(data.month.expenses)}`}
+            />
+            <StatCard
               label="Net Profit"
               value={formatINR(data.totals.profit)}
               icon={<IconTrendUp className="h-5 w-5" />}
               accent="teal"
               trend={
                 data.totals.profit >= 0
-                  ? { direction: "up", label: "Sales ahead of purchases" }
-                  : { direction: "down", label: "Purchases ahead of sales" }
+                  ? { direction: "up", label: "Sales ahead of costs" }
+                  : { direction: "down", label: "Costs ahead of sales" }
               }
             />
             <StatCard
@@ -231,7 +238,7 @@ export default function DashboardPage() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
               Quick actions
             </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <QuickActionTile
                 href="/purchases"
                 icon={<IconCartDown className="h-5 w-5" />}
@@ -253,6 +260,13 @@ export default function DashboardPage() {
                 subtitle="Log a finished sale"
                 tone="pink"
               />
+              <QuickActionTile
+                href="/expenses"
+                icon={<IconWallet className="h-5 w-5" />}
+                title="Record expense"
+                subtitle="Log a business cost"
+                tone="gold"
+              />
             </div>
           </div>
 
@@ -260,7 +274,7 @@ export default function DashboardPage() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
               Manage
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
               <ManageTile
                 href="/items"
                 icon={<IconLayers className="h-5 w-5" />}
@@ -293,6 +307,12 @@ export default function DashboardPage() {
                 label="Customers"
                 count={data.counts.customers}
                 tone="pink"
+              />
+              <ManageTile
+                href="/expenses"
+                icon={<IconWallet className="h-5 w-5" />}
+                label="Expenses"
+                tone="teal"
               />
               <ManageTile
                 href="/reports"

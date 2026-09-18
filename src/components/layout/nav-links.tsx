@@ -9,6 +9,7 @@ import {
   IconChart,
   IconSparkle,
   IconClipboard,
+  IconWallet,
 } from "@/components/icons";
 
 export const dashboardLink = { href: "/", label: "Dashboard", icon: IconDashboard } as const;
@@ -27,6 +28,7 @@ export const transactionLinks = [
   { href: "/purchases", label: "Purchases", icon: IconCartDown },
   { href: "/production", label: "Production", icon: IconSparkle },
   { href: "/sales", label: "Sales", icon: IconTag },
+  { href: "/expenses", label: "Expenses", icon: IconWallet },
 ] as const;
 
 export const reportLinks = [
