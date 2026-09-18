@@ -9,10 +9,12 @@ import {
   masterLinks,
   transactionLinks,
   reportLinks,
+  adminLinks,
 } from "@/components/layout/nav-links";
 import { BrandWordmark } from "@/components/brand/logo-mark";
 import { ThemeCustomizerButton } from "@/components/theme/theme-customizer";
 import { ProfileMenu } from "@/components/auth/profile-menu";
+import { useRole } from "@/lib/use-role";
 import { IconChevronDown, IconLayers } from "@/components/icons";
 
 function NavItem({
@@ -56,6 +58,7 @@ function NavItem({
 export function Sidebar() {
   const pathname = usePathname();
   const [mastersOpen, setMastersOpen] = useState(false);
+  const { isAdmin } = useRole();
 
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname?.startsWith(href);
@@ -134,6 +137,21 @@ export function Sidebar() {
             active={!!isActive(link.href)}
           />
         ))}
+
+        {isAdmin ? (
+          <>
+            <div className="my-2 border-t border-border" />
+            {adminLinks.map((link) => (
+              <NavItem
+                key={link.href}
+                href={link.href}
+                label={link.label}
+                icon={link.icon}
+                active={!!isActive(link.href)}
+              />
+            ))}
+          </>
+        ) : null}
       </nav>
 
       <div className="flex flex-col gap-3">

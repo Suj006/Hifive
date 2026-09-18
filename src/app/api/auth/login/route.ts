@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const valid = await bcrypt.compare(data.password, user.passwordHash);
     if (!valid) return jsonError("Invalid username or password.", 401);
 
-    const token = await createSessionToken(user.id, user.username);
+    const token = await createSessionToken(user.id, user.username, user.role);
     const store = await cookies();
     store.set(SESSION_COOKIE_NAME, token, {
       httpOnly: true,
@@ -34,6 +34,6 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    return NextResponse.json({ username: user.username });
+    return NextResponse.json({ username: user.username, role: user.role });
   });
 }

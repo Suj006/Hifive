@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { Customer, Vendor } from "@/lib/types";
 import { IconPlus, IconEdit, IconTrash, IconSearch } from "@/components/icons";
 import { PartyFormModal } from "@/components/party-form";
@@ -30,6 +31,7 @@ export function PartyListPage({
   const endpoint = kind === "vendor" ? "/api/vendors" : "/api/customers";
   const label = kind === "vendor" ? "Vendor" : "Customer";
   const { data, loading, error, refetch } = useApi<Party[]>(endpoint);
+  const { isAdmin } = useRole();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Party | null>(null);
@@ -76,14 +78,16 @@ export function PartyListPage({
         title={title}
         description={description}
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()}
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()}
+            </Button>
+          ) : undefined
         }
       />
 
@@ -112,15 +116,17 @@ export function PartyListPage({
               kind === "vendor" ? "purchases" : "sales"
             } against them.`}
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()}
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()}
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -135,7 +141,9 @@ export function PartyListPage({
                     {kind === "vendor" ? "Purchases" : "Sales"}
                   </th>
                   <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -157,27 +165,29 @@ export function PartyListPage({
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(p);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(p)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(p);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(p)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -186,22 +196,26 @@ export function PartyListPage({
         )}
       </Card>
 
-      <PartyFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        party={editing}
-        kind={kind}
-      />
+      {isAdmin ? (
+        <>
+          <PartyFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            party={editing}
+            kind={kind}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title={`Delete ${label.toLowerCase()}?`}
-        description={`This will permanently remove "${deleting?.name}".`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title={`Delete ${label.toLowerCase()}?`}
+            description={`This will permanently remove "${deleting?.name}".`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

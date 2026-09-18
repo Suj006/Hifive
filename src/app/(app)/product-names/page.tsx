@@ -9,12 +9,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { ProductName } from "@/lib/types";
 import { IconPlus, IconEdit, IconTrash, IconBox } from "@/components/icons";
 import { ProductNameFormModal } from "@/app/(app)/product-names/product-name-form";
 
 export default function ProductNamesPage() {
   const { data, loading, error, refetch } = useApi<ProductName[]>("/api/product-names");
+  const { isAdmin } = useRole();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ProductName | null>(null);
   const [deleting, setDeleting] = useState<ProductName | null>(null);
@@ -43,14 +45,16 @@ export default function ProductNamesPage() {
         title="Product Names"
         description="Master list of finished products you make — e.g. Bracelet, Chain, Keychain, Bow. Selected when adding a product to Item Master."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Add product name
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Add product name
+            </Button>
+          ) : undefined
         }
       />
 
@@ -65,15 +69,17 @@ export default function ProductNamesPage() {
             title="No product names yet"
             description="Add the finished products you make — Bracelet, Chain, Keychain, Bow — then use them in Item Master."
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Add product name
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Add product name
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -84,7 +90,9 @@ export default function ProductNamesPage() {
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium text-right">Items using it</th>
                   <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -104,27 +112,29 @@ export default function ProductNamesPage() {
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(p);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(p)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(p);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(p)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -133,21 +143,25 @@ export default function ProductNamesPage() {
         )}
       </Card>
 
-      <ProductNameFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        productName={editing}
-      />
+      {isAdmin ? (
+        <>
+          <ProductNameFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            productName={editing}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title="Delete product name?"
-        description={`This will permanently remove "${deleting?.name}" from the product name master.`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title="Delete product name?"
+            description={`This will permanently remove "${deleting?.name}" from the product name master.`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

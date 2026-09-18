@@ -37,19 +37,24 @@ async function getKey(): Promise<CryptoKey> {
   );
 }
 
+export type UserRole = "ADMIN" | "VIEWER";
+
 export interface SessionPayload {
   uid: string;
   username: string;
+  role: UserRole;
   exp: number;
 }
 
 export async function createSessionToken(
   uid: string,
-  username: string
+  username: string,
+  role: UserRole
 ): Promise<string> {
   const payload: SessionPayload = {
     uid,
     username,
+    role,
     exp: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
   const encoder = new TextEncoder();

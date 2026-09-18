@@ -8,7 +8,7 @@ import { IconUser, IconLock, IconLogout, IconChevronDown } from "@/components/ic
 import { ChangePasswordModal } from "@/components/auth/change-password-modal";
 
 function useProfileMenu(rootRef: RefObject<HTMLDivElement | null>) {
-  const { data } = useApi<{ username: string }>("/api/auth/me");
+  const { data } = useApi<{ username: string; role: "ADMIN" | "VIEWER" }>("/api/auth/me");
   const [open, setOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -34,6 +34,7 @@ function useProfileMenu(rootRef: RefObject<HTMLDivElement | null>) {
 
   return {
     username: data?.username ?? "",
+    role: data?.role,
     open,
     setOpen,
     changePasswordOpen,
@@ -92,7 +93,9 @@ export function ProfileMenu({ className }: { className?: string }) {
           <span className="block truncate text-sm font-semibold">
             {m.username || "…"}
           </span>
-          <span className="block text-xs text-muted">Signed in</span>
+          <span className="block text-xs text-muted">
+            {m.role === "VIEWER" ? "View only" : "Signed in"}
+          </span>
         </span>
         <IconChevronDown
           className={cn(
@@ -142,7 +145,7 @@ export function ProfileAvatarButton() {
         <div className="absolute right-0 top-full z-30 mt-2 w-48 overflow-hidden rounded-xl border border-border bg-surface shadow-xl">
           <div className="border-b border-border px-3.5 py-2.5">
             <p className="truncate text-sm font-semibold">{m.username || "…"}</p>
-            <p className="text-xs text-muted">Signed in</p>
+            <p className="text-xs text-muted">{m.role === "VIEWER" ? "View only" : "Signed in"}</p>
           </div>
           <MenuPanel
             onChangePassword={() => {

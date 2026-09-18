@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { Production } from "@/lib/types";
 import { formatDate, formatNumber } from "@/lib/format";
 import { IconPlus, IconEdit, IconTrash, IconSearch, IconSparkle } from "@/components/icons";
@@ -17,6 +18,7 @@ import { ProductionFormModal } from "@/app/(app)/production/production-form";
 
 export default function ProductionPage() {
   const { data, loading, error, refetch } = useApi<Production[]>("/api/production");
+  const { isAdmin } = useRole();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Production | null>(null);
@@ -60,14 +62,16 @@ export default function ProductionPage() {
         title="Production"
         description="Log the finished products you make — each entry adds to that product's available stock for sale."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Record items made
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Record items made
+            </Button>
+          ) : undefined
         }
       />
 
@@ -100,15 +104,17 @@ export default function ProductionPage() {
             title="No production recorded"
             description="Log a batch of finished products you've made — it adds straight to that product's stock, ready for Sales."
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Record items made
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Record items made
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -121,7 +127,9 @@ export default function ProductionPage() {
                   <th className="px-5 py-3 font-medium">Category</th>
                   <th className="px-5 py-3 font-medium text-right">Qty made</th>
                   <th className="px-5 py-3 font-medium">Notes</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -145,27 +153,29 @@ export default function ProductionPage() {
                       {formatNumber(p.quantity)} {p.item.unit}
                     </td>
                     <td className="px-5 py-3.5 text-muted">{p.notes || "—"}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(p);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(p)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(p);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(p)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -174,21 +184,25 @@ export default function ProductionPage() {
         )}
       </Card>
 
-      <ProductionFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        production={editing}
-      />
+      {isAdmin ? (
+        <>
+          <ProductionFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            production={editing}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title="Delete production entry?"
-        description={`This will remove ${deleting?.quantity} ${deleting?.item.unit} of "${deleting?.item.name}" from stock records.`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title="Delete production entry?"
+            description={`This will remove ${deleting?.quantity} ${deleting?.item.unit} of "${deleting?.item.name}" from stock records.`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

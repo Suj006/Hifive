@@ -6,6 +6,6 @@ export async function GET() {
   return withErrorHandling(async () => {
     const session = await getSession();
     if (!session) return jsonError("Not signed in.", 401);
-    return NextResponse.json({ username: session.username });
+    return NextResponse.json({ username: session.username, role: session.role });
   });
 }

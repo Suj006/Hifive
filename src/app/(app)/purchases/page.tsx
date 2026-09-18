@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { Purchase } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
 import { IconPlus, IconEdit, IconTrash, IconSearch, IconCartDown } from "@/components/icons";
@@ -17,6 +18,7 @@ import { PurchaseFormModal } from "@/app/(app)/purchases/purchase-form";
 
 export default function PurchasesPage() {
   const { data, loading, error, refetch } = useApi<Purchase[]>("/api/purchases");
+  const { isAdmin } = useRole();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Purchase | null>(null);
@@ -61,14 +63,16 @@ export default function PurchasesPage() {
         title="Purchases"
         description="Raw material purchases recorded against the item master."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Record purchase
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Record purchase
+            </Button>
+          ) : undefined
         }
       />
 
@@ -101,15 +105,17 @@ export default function PurchasesPage() {
             title="No purchases recorded"
             description="Record your first raw material purchase — date, vendor and amount in INR."
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Record purchase
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Record purchase
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -124,7 +130,9 @@ export default function PurchasesPage() {
                   <th className="px-5 py-3 font-medium text-right">Rate</th>
                   <th className="px-5 py-3 font-medium text-right">Amount</th>
                   <th className="px-5 py-3 font-medium">Payment</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -154,27 +162,29 @@ export default function PurchasesPage() {
                         "—"
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(p);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(p)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(p);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(p)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -183,21 +193,25 @@ export default function PurchasesPage() {
         )}
       </Card>
 
-      <PurchaseFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        purchase={editing}
-      />
+      {isAdmin ? (
+        <>
+          <PurchaseFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            purchase={editing}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title="Delete purchase entry?"
-        description={`This will permanently remove the ${deleting?.item.name} purchase from ${deleting?.vendor.name}.`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title="Delete purchase entry?"
+            description={`This will permanently remove the ${deleting?.item.name} purchase from ${deleting?.vendor.name}.`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

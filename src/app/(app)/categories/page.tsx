@@ -9,12 +9,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { Category } from "@/lib/types";
 import { IconPlus, IconEdit, IconTrash, IconTag } from "@/components/icons";
 import { CategoryFormModal } from "@/app/(app)/categories/category-form";
 
 export default function CategoriesPage() {
   const { data, loading, error, refetch } = useApi<Category[]>("/api/categories");
+  const { isAdmin } = useRole();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
   const [deleting, setDeleting] = useState<Category | null>(null);
@@ -43,14 +45,16 @@ export default function CategoriesPage() {
         title="Categories"
         description="Audience/segment master for products — e.g. Kids, Adults, Male, Female. Each product can be tracked per category with its own stock."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Add category
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Add category
+            </Button>
+          ) : undefined
         }
       />
 
@@ -65,15 +69,17 @@ export default function CategoriesPage() {
             title="No categories yet"
             description="Add categories like Kids, Adults, Male, Female — you'll be able to assign them to products in Item Master."
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Add category
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Add category
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -84,7 +90,9 @@ export default function CategoriesPage() {
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium text-right">Products</th>
                   <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -104,27 +112,29 @@ export default function CategoriesPage() {
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(c);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(c)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(c);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(c)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -133,21 +143,25 @@ export default function CategoriesPage() {
         )}
       </Card>
 
-      <CategoryFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        category={editing}
-      />
+      {isAdmin ? (
+        <>
+          <CategoryFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            category={editing}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title="Delete category?"
-        description={`This will permanently remove "${deleting?.name}".`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title="Delete category?"
+            description={`This will permanently remove "${deleting?.name}".`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

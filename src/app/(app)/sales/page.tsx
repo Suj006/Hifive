@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { Sale } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
 import { IconPlus, IconEdit, IconTrash, IconSearch, IconTag } from "@/components/icons";
@@ -17,6 +18,7 @@ import { SaleFormModal } from "@/app/(app)/sales/sale-form";
 
 export default function SalesPage() {
   const { data, loading, error, refetch } = useApi<Sale[]>("/api/sales");
+  const { isAdmin } = useRole();
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Sale | null>(null);
@@ -61,14 +63,16 @@ export default function SalesPage() {
         title="Sales"
         description="Sales of finished bracelets & accessories to customers."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Record sale
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Record sale
+            </Button>
+          ) : undefined
         }
       />
 
@@ -101,15 +105,17 @@ export default function SalesPage() {
             title="No sales recorded"
             description="Record your first sale of a finished product — date, customer and amount in INR."
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Record sale
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Record sale
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -124,7 +130,9 @@ export default function SalesPage() {
                   <th className="px-5 py-3 font-medium text-right">Rate</th>
                   <th className="px-5 py-3 font-medium text-right">Amount</th>
                   <th className="px-5 py-3 font-medium">Payment</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -154,27 +162,29 @@ export default function SalesPage() {
                         "—"
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(s);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(s)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(s);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(s)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -183,21 +193,25 @@ export default function SalesPage() {
         )}
       </Card>
 
-      <SaleFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        sale={editing}
-      />
+      {isAdmin ? (
+        <>
+          <SaleFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            sale={editing}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title="Delete sale entry?"
-        description={`This will permanently remove the ${deleting?.item.name} sale to ${deleting?.customer.name}.`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title="Delete sale entry?"
+            description={`This will permanently remove the ${deleting?.item.name} sale to ${deleting?.customer.name}.`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

@@ -33,6 +33,11 @@ export const reportLinks = [
   { href: "/reports", label: "Reports", icon: IconChart },
 ] as const;
 
+// Admin-only — hidden entirely for Viewer accounts.
+export const adminLinks = [
+  { href: "/users", label: "Team access", icon: IconUsers },
+] as const;
+
 // Flat list of every link — used by the mobile "More" sheet.
 export const navLinks = [
   dashboardLink,

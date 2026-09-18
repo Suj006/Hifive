@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { useRole } from "@/lib/use-role";
 import type { Item, ItemType } from "@/lib/types";
 import { formatNumber } from "@/lib/format";
 import { IconPlus, IconEdit, IconTrash, IconSearch, IconLayers } from "@/components/icons";
@@ -17,6 +18,7 @@ import { ItemFormModal } from "@/app/(app)/items/item-form";
 
 export default function ItemsPage() {
   const { data, loading, error, refetch } = useApi<Item[]>("/api/items");
+  const { isAdmin } = useRole();
   const [tab, setTab] = useState<ItemType | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -62,14 +64,16 @@ export default function ItemsPage() {
         title="Item Master"
         description="Raw materials and finished products used across purchases & sales."
         action={
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setFormOpen(true);
-            }}
-          >
-            <IconPlus className="h-4 w-4" /> Add item
-          </Button>
+          isAdmin ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
+            >
+              <IconPlus className="h-4 w-4" /> Add item
+            </Button>
+          ) : undefined
         }
       />
 
@@ -117,15 +121,17 @@ export default function ItemsPage() {
             title="No items yet"
             description="Add raw materials (beads, thread, charms…) and finished products (bracelets, keychains…) to start recording purchases and sales."
             action={
-              <Button
-                size="sm"
-                onClick={() => {
-                  setEditing(null);
-                  setFormOpen(true);
-                }}
-              >
-                <IconPlus className="h-4 w-4" /> Add item
-              </Button>
+              isAdmin ? (
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    setEditing(null);
+                    setFormOpen(true);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" /> Add item
+                </Button>
+              ) : undefined
             }
           />
         ) : (
@@ -141,7 +147,9 @@ export default function ItemsPage() {
                   <th className="px-5 py-3 font-medium text-right">Sold</th>
                   <th className="px-5 py-3 font-medium text-right">Stock</th>
                   <th className="px-5 py-3 font-medium">Status</th>
-                  <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  {isAdmin ? (
+                    <th className="px-5 py-3 font-medium text-right">Actions</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
@@ -202,27 +210,29 @@ export default function ItemsPage() {
                         <Badge tone="neutral">Inactive</Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditing(item);
-                            setFormOpen(true);
-                          }}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
-                          aria-label="Edit"
-                        >
-                          <IconEdit className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => setDeleting(item)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
-                          aria-label="Delete"
-                        >
-                          <IconTrash className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="px-5 py-3.5">
+                        <div className="flex justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditing(item);
+                              setFormOpen(true);
+                            }}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-white/10 hover:text-foreground cursor-pointer"
+                            aria-label="Edit"
+                          >
+                            <IconEdit className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => setDeleting(item)}
+                            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                            aria-label="Delete"
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -231,22 +241,26 @@ export default function ItemsPage() {
         )}
       </Card>
 
-      <ItemFormModal
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSaved={refetch}
-        item={editing}
-        defaultType={tab === "PRODUCT" ? "PRODUCT" : "RAW_MATERIAL"}
-      />
+      {isAdmin ? (
+        <>
+          <ItemFormModal
+            open={formOpen}
+            onClose={() => setFormOpen(false)}
+            onSaved={refetch}
+            item={editing}
+            defaultType={tab === "PRODUCT" ? "PRODUCT" : "RAW_MATERIAL"}
+          />
 
-      <ConfirmDialog
-        open={!!deleting}
-        onClose={() => setDeleting(null)}
-        onConfirm={handleDelete}
-        title="Delete item?"
-        description={`This will permanently remove "${deleting?.name}" from the item master.`}
-        loading={deleteLoading}
-      />
+          <ConfirmDialog
+            open={!!deleting}
+            onClose={() => setDeleting(null)}
+            onConfirm={handleDelete}
+            title="Delete item?"
+            description={`This will permanently remove "${deleting?.name}" from the item master.`}
+            loading={deleteLoading}
+          />
+        </>
+      ) : null}
     </div>
   );
 }

@@ -1,4 +1,12 @@
 export type ItemType = "RAW_MATERIAL" | "PRODUCT";
+export type UserRole = "ADMIN" | "VIEWER";
+
+export interface AppUser {
+  id: string;
+  username: string;
+  role: UserRole;
+  createdAt: string;
+}
 
 export interface Category {
   id: string;

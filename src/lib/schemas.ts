@@ -7,6 +7,19 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required").max(200),
 });
 
+export const userRoleSchema = z.enum(["ADMIN", "VIEWER"]);
+
+export const createUserSchema = z.object({
+  username: z.string().trim().min(1, "Username is required").max(60),
+  password: z.string().min(6, "Password must be at least 6 characters").max(200),
+  role: userRoleSchema.default("VIEWER"),
+});
+
+export const updateUserSchema = z.object({
+  role: userRoleSchema.optional(),
+  password: z.string().min(6, "Password must be at least 6 characters").max(200).optional(),
+});
+
 export const changePasswordSchema = z
   .object({
     currentPassword: z.string().min(1, "Current password is required").max(200),

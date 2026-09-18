@@ -9,11 +9,13 @@ import {
   mobilePrimaryHrefs,
   masterLinks,
   reportLinks,
+  adminLinks,
 } from "@/components/layout/nav-links";
 import { BrandWordmark } from "@/components/brand/logo-mark";
 import { IconDots, IconClose } from "@/components/icons";
 import { ThemeCustomizerButton } from "@/components/theme/theme-customizer";
 import { ProfileAvatarButton } from "@/components/auth/profile-menu";
+import { useRole } from "@/lib/use-role";
 
 export function MobileTopBar() {
   return (
@@ -29,13 +31,16 @@ export function MobileTopBar() {
 export function MobileTabBar() {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
+  const { isAdmin } = useRole();
   const primaryLinks = navLinks.filter((l) =>
     (mobilePrimaryHrefs as readonly string[]).includes(l.href)
   );
   const moreLinks = navLinks.filter(
     (l) => !(mobilePrimaryHrefs as readonly string[]).includes(l.href)
   );
-  const moreActive = moreLinks.some((l) => pathname?.startsWith(l.href));
+  const moreActive =
+    moreLinks.some((l) => pathname?.startsWith(l.href)) ||
+    (isAdmin && adminLinks.some((l) => pathname?.startsWith(l.href)));
 
   return (
     <>
@@ -107,6 +112,36 @@ export function MobileTabBar() {
                 );
               })}
             </div>
+
+            {isAdmin ? (
+              <>
+                <p className="mb-1.5 mt-4 text-xs font-semibold uppercase tracking-wide text-muted">
+                  Admin
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {adminLinks.map((link) => {
+                    const active = pathname?.startsWith(link.href);
+                    const Icon = link.icon;
+                    return (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMoreOpen(false)}
+                        className={cn(
+                          "flex flex-col items-center gap-1.5 rounded-xl border border-border py-3 text-center text-xs font-medium transition-colors",
+                          active
+                            ? "bg-[image:var(--gradient-brand-soft)] text-foreground"
+                            : "text-muted hover:text-foreground"
+                        )}
+                      >
+                        <Icon className="h-5 w-5" />
+                        {link.label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
 
             <div className="mt-4">
               <ThemeCustomizerButton className="w-full justify-center" />
