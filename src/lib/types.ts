@@ -40,6 +40,9 @@ export interface Coupon {
   discountType: CouponDiscountType;
   value: number;
   maxDiscount: number | null;
+  startDate: string;
+  endDate: string | null;
+  oncePerCustomer: boolean;
   notes: string | null;
   isActive: boolean;
   createdAt: string;

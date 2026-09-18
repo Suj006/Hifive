@@ -4,6 +4,7 @@ import { saleSchema } from "@/lib/schemas";
 import { withErrorHandling, jsonError } from "@/lib/api";
 import { getItemStock } from "@/lib/stock";
 import { invoiceDayPrefix, buildSaleInvoiceNumber } from "@/lib/invoice-number";
+import { isCouponValidForDate } from "@/lib/sale-math";
 
 export async function GET(request: NextRequest) {
   return withErrorHandling(async () => {
@@ -52,6 +53,23 @@ export async function POST(request: NextRequest) {
       });
       if (!coupon) {
         return jsonError("That coupon code wasn't found. Remove it or pick a valid one.", 422);
+      }
+      if (!isCouponValidForDate(coupon, data.date)) {
+        return jsonError(
+          `Coupon "${coupon.code}" isn't valid for the selected sale date.`,
+          422
+        );
+      }
+      if (coupon.oncePerCustomer) {
+        const alreadyUsed = await prisma.sale.findFirst({
+          where: { couponId: coupon.id, customerId: data.customerId },
+        });
+        if (alreadyUsed) {
+          return jsonError(
+            `Coupon "${coupon.code}" can only be used once per customer, and this customer has already used it.`,
+            422
+          );
+        }
       }
       couponId = coupon.id;
       couponCode = coupon.code;

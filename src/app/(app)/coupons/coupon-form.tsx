@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
+import { todayInputValue, toDateInputValue } from "@/lib/format";
 import type { Coupon, CouponDiscountType } from "@/lib/types";
 
 interface FormState {
@@ -13,6 +14,9 @@ interface FormState {
   discountType: CouponDiscountType;
   value: string;
   maxDiscount: string;
+  startDate: string;
+  endDate: string;
+  oncePerCustomer: boolean;
   notes: string;
   isActive: boolean;
 }
@@ -24,6 +28,9 @@ function initialState(coupon: Coupon | null): FormState {
       discountType: coupon.discountType,
       value: String(coupon.value),
       maxDiscount: coupon.maxDiscount != null ? String(coupon.maxDiscount) : "",
+      startDate: toDateInputValue(coupon.startDate),
+      endDate: coupon.endDate ? toDateInputValue(coupon.endDate) : "",
+      oncePerCustomer: coupon.oncePerCustomer,
       notes: coupon.notes ?? "",
       isActive: coupon.isActive,
     };
@@ -33,6 +40,9 @@ function initialState(coupon: Coupon | null): FormState {
     discountType: "PERCENT",
     value: "",
     maxDiscount: "",
+    startDate: todayInputValue(),
+    endDate: "",
+    oncePerCustomer: false,
     notes: "",
     isActive: true,
   };
@@ -81,11 +91,16 @@ function CouponFormBody({
         code: form.code,
         discountType: form.discountType,
         value: Number(form.value || 0),
+        startDate: form.startDate,
+        oncePerCustomer: form.oncePerCustomer,
         notes: form.notes,
         isActive: form.isActive,
       };
       if (form.discountType === "PERCENT" && form.maxDiscount) {
         payload.maxDiscount = Number(form.maxDiscount);
+      }
+      if (form.endDate) {
+        payload.endDate = form.endDate;
       }
       if (coupon) {
         await apiRequest(`/api/coupons/${coupon.id}`, {
@@ -164,6 +179,35 @@ function CouponFormBody({
           />
         </Field>
       ) : null}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Start date">
+          <Input
+            type="date"
+            required
+            value={form.startDate}
+            onChange={(e) => setForm({ ...form, startDate: e.target.value })}
+          />
+        </Field>
+        <Field label="End date" hint="Optional — leave blank for no expiry">
+          <Input
+            type="date"
+            min={form.startDate || undefined}
+            value={form.endDate}
+            onChange={(e) => setForm({ ...form, endDate: e.target.value })}
+          />
+        </Field>
+      </div>
+
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={form.oncePerCustomer}
+          onChange={(e) => setForm({ ...form, oncePerCustomer: e.target.checked })}
+          className="h-4 w-4 rounded border-border accent-[#ec1876]"
+        />
+        Limit to one use per customer
+      </label>
 
       <Field label="Notes">
         <Textarea

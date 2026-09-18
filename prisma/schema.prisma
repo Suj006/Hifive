@@ -64,16 +64,22 @@ model RawMaterialName {
 // Discount codes an admin can create — either a percentage off (with an
 // optional rupee cap) or a flat rupee amount. Applied to a Sale by code.
 model Coupon {
-  id           String   @id @default(cuid())
-  code         String   @unique // e.g. ONAM2026 — always stored uppercase
-  discountType String // "PERCENT" | "FLAT"
-  value        Float // percent (0-100) if PERCENT, else a flat rupee amount
-  maxDiscount  Float? // caps the rupee discount — only meaningful for PERCENT
-  notes        String?
-  isActive     Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  sales        Sale[]
+  id              String    @id @default(cuid())
+  code            String    @unique // e.g. ONAM2026 — always stored uppercase
+  discountType    String // "PERCENT" | "FLAT"
+  value           Float // percent (0-100) if PERCENT, else a flat rupee amount
+  maxDiscount     Float? // caps the rupee discount — only meaningful for PERCENT
+  // Validity window, checked against the sale's own date (not "today"), so a
+  // backdated entry is judged by whether the coupon was valid on that day.
+  startDate       DateTime
+  endDate         DateTime? // null means open-ended, no expiry
+  // When true, a customer may only use this coupon on one sale, ever.
+  oncePerCustomer Boolean   @default(false)
+  notes           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  sales           Sale[]
 }
 
 model Item {

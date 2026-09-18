@@ -11,7 +11,7 @@ import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { useRole } from "@/lib/use-role";
 import type { Coupon } from "@/lib/types";
-import { formatINR, formatNumber } from "@/lib/format";
+import { formatINR, formatNumber, formatDate } from "@/lib/format";
 import { IconPlus, IconEdit, IconTrash, IconCoupon } from "@/components/icons";
 import { CouponFormModal } from "@/app/(app)/coupons/coupon-form";
 
@@ -21,6 +21,11 @@ function describeDiscount(coupon: Coupon): string {
     return `${formatNumber(coupon.value)}% off${cap}`;
   }
   return `${formatINR(coupon.value)} off`;
+}
+
+function describeValidity(coupon: Coupon): string {
+  const from = formatDate(coupon.startDate);
+  return coupon.endDate ? `${from} – ${formatDate(coupon.endDate)}` : `From ${from}, no expiry`;
 }
 
 export default function CouponsPage() {
@@ -93,11 +98,12 @@ export default function CouponsPage() {
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[780px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Code</th>
                   <th className="px-5 py-3 font-medium">Discount</th>
+                  <th className="px-5 py-3 font-medium">Validity</th>
                   <th className="px-5 py-3 font-medium text-right">Used on</th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   {isAdmin ? (
@@ -112,7 +118,13 @@ export default function CouponsPage() {
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
                     <td className="px-5 py-3.5 font-mono text-sm font-semibold">{c.code}</td>
-                    <td className="px-5 py-3.5">{describeDiscount(c)}</td>
+                    <td className="px-5 py-3.5">
+                      {describeDiscount(c)}
+                      {c.oncePerCustomer ? (
+                        <span className="ml-1.5 text-xs text-muted">· once per customer</span>
+                      ) : null}
+                    </td>
+                    <td className="px-5 py-3.5 text-muted">{describeValidity(c)}</td>
                     <td className="px-5 py-3.5 text-right text-muted">
                       {c._count?.sales ?? 0} sale{c._count?.sales === 1 ? "" : "s"}
                     </td>

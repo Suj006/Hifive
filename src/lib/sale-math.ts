@@ -28,3 +28,17 @@ export function couponDiscountAmount(subtotal: number, coupon: CouponLike): numb
       : raw;
   return Math.min(Math.max(0, subtotal), Math.max(0, capped));
 }
+
+export interface CouponWindow {
+  startDate: Date | string;
+  endDate: Date | string | null;
+}
+
+// Whether a coupon is valid on a given date — checked against the sale's own
+// (possibly backdated) date, not "today".
+export function isCouponValidForDate(coupon: CouponWindow, date: Date | string): boolean {
+  const d = new Date(date).getTime();
+  if (d < new Date(coupon.startDate).getTime()) return false;
+  if (coupon.endDate != null && d > new Date(coupon.endDate).getTime()) return false;
+  return true;
+}

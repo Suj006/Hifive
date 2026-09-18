@@ -73,12 +73,21 @@ export const couponSchema = z
     // Only meaningful for PERCENT coupons — caps the rupee discount. Omitted
     // (not sent) means uncapped.
     maxDiscount: z.coerce.number().positive("Max discount must be greater than 0").optional(),
+    startDate: z.coerce.date(),
+    // Omitted means open-ended — no expiry.
+    endDate: z.coerce.date().optional(),
+    // When true, a customer may only ever use this coupon once.
+    oncePerCustomer: z.coerce.boolean().default(false),
     notes: z.string().trim().max(500).optional().or(z.literal("")),
     isActive: z.coerce.boolean().default(true),
   })
   .refine((data) => data.discountType !== "PERCENT" || data.value <= 100, {
     message: "A percentage discount can't be more than 100",
     path: ["value"],
+  })
+  .refine((data) => data.endDate === undefined || data.endDate >= data.startDate, {
+    message: "End date can't be before the start date",
+    path: ["endDate"],
   });
 
 export const productionSchema = z.object({

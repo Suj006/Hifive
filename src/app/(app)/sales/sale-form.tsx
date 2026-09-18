@@ -129,7 +129,17 @@ function SaleFormBody({
 
   const activeItems = (items ?? []).filter((i) => i.isActive || i.id === sale?.itemId);
   const activeCustomers = (customers ?? []).filter((c) => c.isActive || c.id === sale?.customerId);
-  const activeCoupons = (coupons ?? []).filter((c) => c.isActive || c.id === sale?.couponId);
+  // Only offer coupons whose validity window covers the sale's own date —
+  // except the one already applied to this sale, which stays selectable
+  // (and de-selectable) even if its window has since passed.
+  const activeCoupons = (coupons ?? [])
+    .filter((c) => c.isActive || c.id === sale?.couponId)
+    .filter((c) => {
+      if (c.id === sale?.couponId) return true;
+      const start = toDateInputValue(c.startDate);
+      const end = c.endDate ? toDateInputValue(c.endDate) : null;
+      return form.date >= start && (!end || form.date <= end);
+    });
 
   const customerOptions = useMemo(
     () =>
@@ -141,6 +151,22 @@ function SaleFormBody({
     [activeCustomers]
   );
   const selectedCustomer = activeCustomers.find((c) => c.id === form.customerId) ?? null;
+
+  // Reference-only note: does the sale's own date fall on this customer's
+  // birthday or birthday month? Compared against the sale's date (not
+  // "today") so a backdated entry is judged correctly too.
+  const birthdayNote = useMemo(() => {
+    if (!selectedCustomer?.dobMonth || !selectedCustomer?.dobDay) return null;
+    const [, month, day] = form.date.split("-").map(Number);
+    if (!month || !day) return null;
+    if (month === selectedCustomer.dobMonth && day === selectedCustomer.dobDay) {
+      return `It's ${selectedCustomer.name}'s birthday today!`;
+    }
+    if (month === selectedCustomer.dobMonth) {
+      return `It's ${selectedCustomer.name}'s birthday month.`;
+    }
+    return null;
+  }, [selectedCustomer, form.date]);
 
   const productNames = useMemo(
     () => Array.from(new Set(activeItems.map((i) => i.name))).sort(),
@@ -339,6 +365,11 @@ function SaleFormBody({
           emptyText="No matching customer"
         />
       </Field>
+      {birthdayNote ? (
+        <p className="-mt-2 flex items-center gap-1.5 text-sm font-medium text-brand-pink-2">
+          <span aria-hidden>🎂</span> {birthdayNote}
+        </p>
+      ) : null}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Field label="Quantity">
@@ -421,7 +452,9 @@ function SaleFormBody({
             selectedCoupon
               ? describeCoupon(selectedCoupon)
               : activeCoupons.length === 0
-              ? "No coupons yet"
+              ? (coupons ?? []).length === 0
+                ? "No coupons yet"
+                : "No coupons valid for this date"
               : "Optional"
           }
         >
