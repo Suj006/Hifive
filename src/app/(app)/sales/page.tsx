@@ -13,7 +13,7 @@ import { useToast } from "@/components/ui/toast";
 import { useRole } from "@/lib/use-role";
 import type { Sale } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
-import { IconPlus, IconEdit, IconTrash, IconSearch, IconTag } from "@/components/icons";
+import { IconPlus, IconEdit, IconTrash, IconSearch, IconTag, IconDownload } from "@/components/icons";
 import { SaleFormModal } from "@/app/(app)/sales/sale-form";
 
 export default function SalesPage() {
@@ -24,6 +24,8 @@ export default function SalesPage() {
   const [editing, setEditing] = useState<Sale | null>(null);
   const [deleting, setDeleting] = useState<Sale | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const { push } = useToast();
 
   const sales = useMemo(() => {
@@ -41,6 +43,63 @@ export default function SalesPage() {
   }, [data, search]);
 
   const total = sales.reduce((sum, s) => sum + s.amount, 0);
+
+  const selectedSales = sales.filter((s) => selected.has(s.id));
+  const selectedCustomerIds = new Set(selectedSales.map((s) => s.customerId));
+  const multipleCustomers = selectedCustomerIds.size > 1;
+  const selectedTotal = selectedSales.reduce((sum, s) => sum + s.amount, 0);
+  const allFilteredSelected = sales.length > 0 && sales.every((s) => selected.has(s.id));
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllFiltered() {
+    setSelected((prev) => {
+      if (allFilteredSelected) {
+        const next = new Set(prev);
+        for (const s of sales) next.delete(s.id);
+        return next;
+      }
+      const next = new Set(prev);
+      for (const s of sales) next.add(s.id);
+      return next;
+    });
+  }
+
+  async function handleGenerateInvoice() {
+    if (selectedSales.length === 0 || multipleCustomers) return;
+    setGeneratingInvoice(true);
+    try {
+      const ids = selectedSales.map((s) => s.id).join(",");
+      const res = await fetch(`/api/invoices/sales?ids=${ids}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Could not generate invoice");
+      }
+      const blob = await res.blob();
+      const disposition = res.headers.get("Content-Disposition") ?? "";
+      const match = disposition.match(/filename="([^"]+)"/);
+      const filename = match?.[1] ?? "invoice.pdf";
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      push("Invoice downloaded");
+      setSelected(new Set());
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Could not generate invoice", "error");
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  }
 
   async function handleDelete() {
     if (!deleting) return;
@@ -94,6 +153,33 @@ export default function SalesPage() {
         ) : null}
       </div>
 
+      {selected.size > 0 ? (
+        <Card className="mb-4 flex flex-col gap-3 border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-sm">
+            <span className="font-semibold text-foreground">{selected.size} selected</span>
+            <span className="text-muted"> · Total {formatINR(selectedTotal)}</span>
+            {multipleCustomers ? (
+              <p className="mt-1 text-xs text-danger">
+                Select entries for one customer only to generate a combined invoice.
+              </p>
+            ) : null}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+              Clear
+            </Button>
+            <Button
+              size="sm"
+              disabled={multipleCustomers || generatingInvoice}
+              onClick={handleGenerateInvoice}
+            >
+              <IconDownload className="h-4 w-4" />
+              {generatingInvoice ? "Generating…" : "Generate invoice"}
+            </Button>
+          </div>
+        </Card>
+      ) : null}
+
       <Card className="overflow-hidden">
         {loading ? (
           <div className="p-6 text-sm text-muted">Loading sales…</div>
@@ -123,6 +209,15 @@ export default function SalesPage() {
             <table className="w-full min-w-[820px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="w-10 px-5 py-3 font-medium">
+                    <input
+                      type="checkbox"
+                      checked={allFilteredSelected}
+                      onChange={toggleAllFiltered}
+                      aria-label="Select all"
+                      className="h-4 w-4 cursor-pointer rounded accent-[var(--brand-pink-2)]"
+                    />
+                  </th>
                   <th className="px-5 py-3 font-medium">Date</th>
                   <th className="px-5 py-3 font-medium">Product</th>
                   <th className="px-5 py-3 font-medium">Customer</th>
@@ -141,6 +236,15 @@ export default function SalesPage() {
                     key={s.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
+                    <td className="px-5 py-3.5">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(s.id)}
+                        onChange={() => toggleOne(s.id)}
+                        aria-label={`Select ${s.item.name} sale to ${s.customer.name}`}
+                        className="h-4 w-4 cursor-pointer rounded accent-[var(--brand-pink-2)]"
+                      />
+                    </td>
                     <td className="px-5 py-3.5 whitespace-nowrap text-muted">
                       {formatDate(s.date)}
                     </td>
