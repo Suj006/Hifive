@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import type { Customer, Vendor } from "@/lib/types";
+import { MONTH_NAMES, DAYS_IN_MONTH } from "@/lib/dob";
 
 interface FormState {
   name: string;
@@ -15,9 +16,12 @@ interface FormState {
   address: string;
   notes: string;
   isActive: boolean;
+  dobMonth: string;
+  dobDay: string;
 }
 
 function initialState(party: Vendor | Customer | null): FormState {
+  const dob = party && "dobMonth" in party ? party : null;
   if (party) {
     return {
       name: party.name,
@@ -26,9 +30,20 @@ function initialState(party: Vendor | Customer | null): FormState {
       address: party.address ?? "",
       notes: party.notes ?? "",
       isActive: party.isActive,
+      dobMonth: dob?.dobMonth ? String(dob.dobMonth) : "",
+      dobDay: dob?.dobDay ? String(dob.dobDay) : "",
     };
   }
-  return { name: "", phone: "", email: "", address: "", notes: "", isActive: true };
+  return {
+    name: "",
+    phone: "",
+    email: "",
+    address: "",
+    notes: "",
+    isActive: true,
+    dobMonth: "",
+    dobDay: "",
+  };
 }
 
 export function PartyFormModal({
@@ -87,16 +102,28 @@ function PartyFormBody({
     setSaving(true);
     setError(null);
     try {
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        phone: form.phone,
+        email: form.email,
+        address: form.address,
+        notes: form.notes,
+        isActive: form.isActive,
+      };
+      if (kind === "customer") {
+        if (form.dobMonth) payload.dobMonth = Number(form.dobMonth);
+        if (form.dobDay) payload.dobDay = Number(form.dobDay);
+      }
       if (party) {
         await apiRequest(`${endpoint}/${party.id}`, {
           method: "PUT",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         push(`${label} updated`);
       } else {
         await apiRequest(endpoint, {
           method: "POST",
-          body: JSON.stringify(form),
+          body: JSON.stringify(payload),
         });
         push(`${label} added`);
       }
@@ -134,6 +161,50 @@ function PartyFormBody({
           />
         </Field>
       </div>
+      {kind === "customer" ? (
+        <div className="grid grid-cols-2 gap-3">
+          <Field label="Birthday — month" hint="No year needed, just for wishing them">
+            <Select
+              value={form.dobMonth}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  dobMonth: e.target.value,
+                  dobDay:
+                    e.target.value &&
+                    Number(form.dobDay) > DAYS_IN_MONTH[Number(e.target.value) - 1]
+                      ? ""
+                      : form.dobDay,
+                })
+              }
+            >
+              <option value="">Not set</option>
+              {MONTH_NAMES.map((m, i) => (
+                <option key={m} value={i + 1}>
+                  {m}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Birthday — day">
+            <Select
+              disabled={!form.dobMonth}
+              value={form.dobDay}
+              onChange={(e) => setForm({ ...form, dobDay: e.target.value })}
+            >
+              <option value="">Not set</option>
+              {Array.from(
+                { length: form.dobMonth ? DAYS_IN_MONTH[Number(form.dobMonth) - 1] : 31 },
+                (_, i) => i + 1
+              ).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        </div>
+      ) : null}
       <Field label="Address">
         <Textarea
           rows={2}

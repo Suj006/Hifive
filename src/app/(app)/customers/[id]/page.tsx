@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { useApi } from "@/lib/use-api";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
+import { formatBirthday } from "@/lib/dob";
 import { toWhatsAppLink } from "@/lib/whatsapp";
 import type { Customer, Sale } from "@/lib/types";
 import {
@@ -86,9 +87,16 @@ export default function CustomerProfilePage() {
         <>
           <Card className="mb-6 overflow-hidden">
             <CardContent className="flex flex-col gap-1.5 pt-5">
+              <p className="font-mono text-xs text-muted">{customer.code}</p>
               {customer.phone ? <p className="text-sm text-muted">{customer.phone}</p> : null}
               {customer.email ? <p className="text-sm text-muted">{customer.email}</p> : null}
               {customer.address ? <p className="text-sm text-muted">{customer.address}</p> : null}
+              {customer.dobMonth && customer.dobDay ? (
+                <p className="text-sm text-muted">
+                  <span className="font-medium text-foreground">Birthday: </span>
+                  {formatBirthday(customer.dobMonth, customer.dobDay)}
+                </p>
+              ) : null}
               {customer.notes ? (
                 <p className="mt-1 text-sm text-muted">
                   <span className="font-medium text-foreground">Notes: </span>

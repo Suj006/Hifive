@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withErrorHandling, jsonError } from "@/lib/api";
+import { generatePartyCode } from "@/lib/party-code";
 
 interface ImportRow {
   name: string;
@@ -20,6 +21,7 @@ export async function POST(request: NextRequest) {
     const existingKeys = new Set(existing.map((v) => v.name.trim().toLowerCase()));
     const seenInBatch = new Set<string>();
 
+    let sequence = (await prisma.vendor.count()) + 1;
     let imported = 0;
     let skipped = 0;
     for (const row of rows) {
@@ -37,6 +39,7 @@ export async function POST(request: NextRequest) {
           email: row.email?.trim() || null,
           address: row.address?.trim() || null,
           notes: row.notes?.trim() || null,
+          code: generatePartyCode("vendor", sequence++),
         },
       });
       imported++;

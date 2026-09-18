@@ -78,6 +78,7 @@ model Item {
 
 model Vendor {
   id        String     @id @default(cuid())
+  code      String     @unique // auto-generated, e.g. VEND-0001
   name      String     @unique
   phone     String?
   email     String?
@@ -91,11 +92,16 @@ model Vendor {
 
 model Customer {
   id        String   @id @default(cuid())
+  code      String   @unique // auto-generated, e.g. CUST-0001
   name      String
-  phone     String?
+  phone     String?  @unique // same phone can't be used for two different customers
   email     String?
   address   String?
   notes     String?
+  // Only month/day are collected (no year) — customers are more willing to
+  // share this for birthday greetings than a full date they'd use to infer age.
+  dobMonth  Int?
+  dobDay    Int?
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

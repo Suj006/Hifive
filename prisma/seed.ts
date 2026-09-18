@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { generateItemCode, computeVariantKey } from "../src/lib/item-code";
+import { generatePartyCode } from "../src/lib/party-code";
 import type { ItemType } from "../src/lib/types";
 
 const adapter = new PrismaBetterSqlite3({
@@ -89,16 +90,16 @@ async function main() {
       { name: "Sundar Bead House", phone: "+91 98765 43210", address: "Zaveri Bazaar, Mumbai" },
       { name: "Craftsy Supplies Co.", phone: "+91 91234 56780", address: "T. Nagar, Chennai" },
       { name: "Rainbow Thread Traders", phone: "+91 99887 66554", address: "Karol Bagh, Delhi" },
-    ].map((d) => prisma.vendor.create({ data: d }))
+    ].map((d, i) => prisma.vendor.create({ data: { ...d, code: generatePartyCode("vendor", i + 1) } }))
   );
 
   const customers = await Promise.all(
     [
-      { name: "Ananya Sharma", phone: "+91 90000 11122" },
+      { name: "Ananya Sharma", phone: "+91 90000 11122", dobMonth: 4, dobDay: 15 },
       { name: "Rhea Kapoor", phone: "+91 90000 33344" },
       { name: "Meera Nair", phone: "+91 90000 55566" },
       { name: "Kabir Singh", phone: "+91 90000 77788" },
-    ].map((d) => prisma.customer.create({ data: d }))
+    ].map((d, i) => prisma.customer.create({ data: { ...d, code: generatePartyCode("customer", i + 1) } }))
   );
 
   const paymentModes = ["UPI", "Cash", "Bank Transfer"];

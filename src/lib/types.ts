@@ -48,6 +48,7 @@ export interface Item {
 
 export interface Vendor {
   id: string;
+  code: string;
   name: string;
   phone: string | null;
   email: string | null;
@@ -60,11 +61,14 @@ export interface Vendor {
 
 export interface Customer {
   id: string;
+  code: string;
   name: string;
   phone: string | null;
   email: string | null;
   address: string | null;
   notes: string | null;
+  dobMonth: number | null;
+  dobDay: number | null;
   isActive: boolean;
   createdAt: string;
   _count?: { sales: number };

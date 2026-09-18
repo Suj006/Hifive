@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { partySchema } from "@/lib/schemas";
 import { withErrorHandling } from "@/lib/api";
+import { generatePartyCode } from "@/lib/party-code";
 
 export async function GET() {
   return withErrorHandling(async () => {
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
   return withErrorHandling(async () => {
     const body = await request.json();
     const data = partySchema.parse(body);
+    const sequence = (await prisma.vendor.count()) + 1;
+    const code = generatePartyCode("vendor", sequence);
     const vendor = await prisma.vendor.create({
       data: {
         ...data,
@@ -24,6 +27,7 @@ export async function POST(request: NextRequest) {
         email: data.email || null,
         address: data.address || null,
         notes: data.notes || null,
+        code,
       },
     });
     return NextResponse.json(vendor, { status: 201 });

@@ -74,6 +74,27 @@ export const partySchema = z.object({
   isActive: z.coerce.boolean().default(true),
 });
 
+// Longest valid day for each month, allowing Feb 29 since no year is stored
+// (a leap-day birthday is valid; the schema can't know which years are leap).
+const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+export const customerSchema = partySchema
+  .extend({
+    dobMonth: z.coerce.number().int().min(1).max(12).optional(),
+    dobDay: z.coerce.number().int().min(1).max(31).optional(),
+  })
+  .refine((data) => (data.dobMonth === undefined) === (data.dobDay === undefined), {
+    message: "Choose both a month and a day, or leave date of birth blank",
+    path: ["dobDay"],
+  })
+  .refine(
+    (data) =>
+      data.dobMonth === undefined ||
+      data.dobDay === undefined ||
+      data.dobDay <= DAYS_IN_MONTH[data.dobMonth - 1],
+    { message: "That day doesn't exist in the selected month", path: ["dobDay"] }
+  );
+
 export const purchaseSchema = z.object({
   date: z.coerce.date(),
   itemId: z.string().min(1, "Raw material is required"),

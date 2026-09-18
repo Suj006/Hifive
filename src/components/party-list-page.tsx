@@ -62,7 +62,8 @@ export function PartyListPage({
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          (p.phone ?? "").toLowerCase().includes(q)
+          (p.phone ?? "").toLowerCase().includes(q) ||
+          p.code.toLowerCase().includes(q)
       );
     }
     return list;
@@ -152,9 +153,10 @@ export function PartyListPage({
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[640px] text-sm">
+            <table className="w-full min-w-[740px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="px-5 py-3 font-medium">Code</th>
                   <th className="px-5 py-3 font-medium">Name</th>
                   <th className="px-5 py-3 font-medium">Phone</th>
                   <th className="px-5 py-3 font-medium">Email</th>
@@ -173,6 +175,9 @@ export function PartyListPage({
                     key={p.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
+                    <td className="px-5 py-3.5 whitespace-nowrap font-mono text-xs text-muted">
+                      {p.code}
+                    </td>
                     <td className="px-5 py-3.5 font-medium">
                       {kind === "customer" ? (
                         <Link

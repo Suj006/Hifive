@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { partySchema } from "@/lib/schemas";
+import { customerSchema } from "@/lib/schemas";
 import { withErrorHandling, jsonError } from "@/lib/api";
 
 export async function PUT(
@@ -10,15 +10,30 @@ export async function PUT(
   return withErrorHandling(async () => {
     const { id } = await params;
     const body = await request.json();
-    const data = partySchema.parse(body);
+    const data = customerSchema.parse(body);
+    const phone = data.phone || null;
+
+    if (phone) {
+      const dup = await prisma.customer.findUnique({ where: { phone } });
+      if (dup && dup.id !== id) {
+        return jsonError(
+          `This phone number is already used by ${dup.name} (${dup.code}).`,
+          409
+        );
+      }
+    }
+
     const customer = await prisma.customer.update({
       where: { id },
       data: {
-        ...data,
-        phone: data.phone || null,
+        name: data.name,
+        phone,
         email: data.email || null,
         address: data.address || null,
         notes: data.notes || null,
+        isActive: data.isActive,
+        dobMonth: data.dobMonth ?? null,
+        dobDay: data.dobDay ?? null,
       },
     });
     return NextResponse.json(customer);

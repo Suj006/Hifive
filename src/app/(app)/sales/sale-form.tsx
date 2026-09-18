@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
+import { Combobox } from "@/components/ui/combobox";
 import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { todayInputValue, toDateInputValue, formatNumber, formatINR } from "@/lib/format";
@@ -110,6 +111,16 @@ function SaleFormBody({
   const activeItems = (items ?? []).filter((i) => i.isActive || i.id === sale?.itemId);
   const activeCustomers = (customers ?? []).filter((c) => c.isActive || c.id === sale?.customerId);
 
+  const customerOptions = useMemo(
+    () =>
+      activeCustomers.map((c) => ({
+        value: c.id,
+        label: c.name,
+        sublabel: c.phone ? `${c.code} · ${c.phone}` : c.code,
+      })),
+    [activeCustomers]
+  );
+
   const productNames = useMemo(
     () => Array.from(new Set(activeItems.map((i) => i.name))).sort(),
     [activeItems]
@@ -160,6 +171,10 @@ function SaleFormBody({
     }
     if (quantityExceedsStock) {
       setError(`Only ${formatNumber(availableStock ?? 0)} in stock — reduce the quantity.`);
+      return;
+    }
+    if (!form.customerId) {
+      setError("Please select a customer.");
       return;
     }
     setSaving(true);
@@ -276,20 +291,19 @@ function SaleFormBody({
 
       <Field
         label="Customer"
-        hint={activeCustomers.length === 0 ? "Add a customer first" : undefined}
+        hint={
+          activeCustomers.length === 0
+            ? "Add a customer first"
+            : "Search by name or phone — same names are shown with their code/phone"
+        }
       >
-        <Select
-          required
+        <Combobox
           value={form.customerId}
-          onChange={(e) => setForm({ ...form, customerId: e.target.value })}
-        >
-          <option value="">Select customer</option>
-          {activeCustomers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
+          onChange={(customerId) => setForm({ ...form, customerId })}
+          options={customerOptions}
+          placeholder="Search by name or phone…"
+          emptyText="No matching customer"
+        />
       </Field>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
