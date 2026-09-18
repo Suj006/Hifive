@@ -48,3 +48,6 @@ next-env.d.ts
 /prisma/*.db-journal
 /*.db
 /*.db-journal
+
+# automatic database backups (created on server close, or via "Backup now")
+/backups

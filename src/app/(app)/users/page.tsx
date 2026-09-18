@@ -13,7 +13,7 @@ import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { formatDate } from "@/lib/format";
 import type { AppUser, UserRole } from "@/lib/types";
-import { IconPlus, IconTrash, IconLock, IconUsers } from "@/components/icons";
+import { IconPlus, IconTrash, IconLock, IconUsers, IconDownload } from "@/components/icons";
 
 export default function UsersPage() {
   const { data: me } = useApi<{ username: string; role: UserRole }>("/api/auth/me");
@@ -23,8 +23,21 @@ export default function UsersPage() {
   const [deleting, setDeleting] = useState<AppUser | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [roleSaving, setRoleSaving] = useState<string | null>(null);
+  const [backingUp, setBackingUp] = useState(false);
   const { push } = useToast();
   const users = data ?? [];
+
+  async function handleBackupNow() {
+    setBackingUp(true);
+    try {
+      const result = await apiRequest<{ folder: string }>("/api/backup", { method: "POST" });
+      push(`Backup saved to ${result.folder}`);
+    } catch (err) {
+      push(err instanceof Error ? err.message : "Backup failed", "error");
+    } finally {
+      setBackingUp(false);
+    }
+  }
 
   async function handleRoleChange(user: AppUser, role: UserRole) {
     setRoleSaving(user.id);
@@ -156,6 +169,19 @@ export default function UsersPage() {
             </table>
           </div>
         )}
+      </Card>
+
+      <Card className="mt-6 flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-foreground">Backups</p>
+          <p className="mt-0.5 text-xs text-muted">
+            A dated copy of your data is saved automatically every time the server is closed.
+            You can also make one right now.
+          </p>
+        </div>
+        <Button variant="secondary" onClick={handleBackupNow} disabled={backingUp}>
+          <IconDownload className="h-4 w-4" /> {backingUp ? "Backing up…" : "Backup now"}
+        </Button>
       </Card>
 
       <CreateUserModal
