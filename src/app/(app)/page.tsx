@@ -213,7 +213,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard
               label="Total Purchases"
               value={formatINR(data.totals.purchases)}
@@ -280,6 +280,22 @@ export default function DashboardPage() {
                   { label: "Purchases", value: `-${formatINR(data.totals.purchases)}` },
                   { label: "Expenses", value: `-${formatINR(data.totals.expenses)}` },
                 ],
+              }}
+            />
+            <StatCard
+              label="Outstanding Dues"
+              value={formatINR(data.totals.due)}
+              icon={<IconWallet className="h-5 w-5" />}
+              accent="gold"
+              sub={data.totals.due > 0 ? "Owed by customers" : "Everyone's paid up"}
+              details={{
+                title: "Customers with dues",
+                emptyText: "Everyone's paid up.",
+                rows: data.topDues.map((d) => ({
+                  label: d.name,
+                  sub: `${d.entries} entr${d.entries === 1 ? "y" : "ies"}`,
+                  value: formatINR(d.due),
+                })),
               }}
             />
           </div>

@@ -53,6 +53,8 @@ export async function POST(request: NextRequest) {
     const sale = await prisma.sale.create({
       data: {
         ...data,
+        // Not specified means "paid in full" — the common case.
+        amountPaid: data.amountPaid ?? data.amount,
         invoiceNumber,
         paymentMode: data.paymentMode || null,
         notes: data.notes || null,

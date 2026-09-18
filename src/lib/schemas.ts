@@ -98,14 +98,26 @@ export const expenseSchema = z.object({
 // invoiceNumber is deliberately absent here — it's generated server-side
 // (see src/lib/invoice-number.ts) and never accepted from the client, so
 // every sale gets one automatically instead of relying on manual entry.
-export const saleSchema = z.object({
-  date: z.coerce.date(),
-  itemId: z.string().min(1, "Product is required"),
-  customerId: z.string().min(1, "Customer is required"),
-  quantity: z.coerce.number().positive("Quantity must be greater than 0"),
-  rate: z.coerce.number().min(0, "Rate cannot be negative"),
-  discount: z.coerce.number().min(0).default(0),
-  amount: z.coerce.number().min(0, "Amount cannot be negative"),
-  paymentMode: z.string().trim().max(30).optional().or(z.literal("")),
-  notes: z.string().trim().max(500).optional().or(z.literal("")),
+export const saleSchema = z
+  .object({
+    date: z.coerce.date(),
+    itemId: z.string().min(1, "Product is required"),
+    customerId: z.string().min(1, "Customer is required"),
+    quantity: z.coerce.number().positive("Quantity must be greater than 0"),
+    rate: z.coerce.number().min(0, "Rate cannot be negative"),
+    discount: z.coerce.number().min(0).default(0),
+    amount: z.coerce.number().min(0, "Amount cannot be negative"),
+    // Optional — omitted (or left blank) means "paid in full", handled by
+    // the route itself so callers that don't know about dues yet still work.
+    amountPaid: z.coerce.number().min(0, "Amount received cannot be negative").optional(),
+    paymentMode: z.string().trim().max(30).optional().or(z.literal("")),
+    notes: z.string().trim().max(500).optional().or(z.literal("")),
+  })
+  .refine((data) => data.amountPaid === undefined || data.amountPaid <= data.amount, {
+    message: "Amount received can't be more than the sale amount",
+    path: ["amountPaid"],
+  });
+
+export const recordPaymentSchema = z.object({
+  amount: z.coerce.number().positive("Payment amount must be greater than 0"),
 });

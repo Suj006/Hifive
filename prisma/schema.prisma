@@ -133,6 +133,10 @@ model Sale {
   quantity      Float
   rate          Float // per unit selling price in INR
   amount        Float // quantity * rate (+ any adjustment), stored for auditability
+  // How much of `amount` has actually been received — defaults to the full
+  // amount (paid in full) unless a partial payment is recorded, so
+  // `amount - amountPaid` is the outstanding due for this sale.
+  amountPaid    Float    @default(0)
   discount      Float    @default(0)
   invoiceNumber String?
   paymentMode   String?

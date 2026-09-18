@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import { todayInputValue, toDateInputValue, formatNumber } from "@/lib/format";
+import { todayInputValue, toDateInputValue, formatNumber, formatINR } from "@/lib/format";
 import type { Customer, Item, Sale } from "@/lib/types";
 import { PAYMENT_MODES } from "@/lib/constants";
 
@@ -21,6 +21,7 @@ interface FormState {
   rate: string;
   discount: string;
   amount: string;
+  amountPaid: string;
   invoiceNumber: string;
   paymentMode: string;
   notes: string;
@@ -37,6 +38,7 @@ function initialState(sale: Sale | null): FormState {
       rate: String(sale.rate),
       discount: String(sale.discount),
       amount: String(sale.amount),
+      amountPaid: String(sale.amountPaid),
       invoiceNumber: sale.invoiceNumber ?? "",
       paymentMode: sale.paymentMode ?? "UPI",
       notes: sale.notes ?? "",
@@ -51,6 +53,7 @@ function initialState(sale: Sale | null): FormState {
     rate: "",
     discount: "0",
     amount: "",
+    amountPaid: "",
     invoiceNumber: "",
     paymentMode: "UPI",
     notes: "",
@@ -94,6 +97,12 @@ function SaleFormBody({
   // into it directly — otherwise editing an existing sale's quantity or
   // rate silently left the old amount in place.
   const [amountTouched, setAmountTouched] = useState(false);
+  // Starts "touched" only when editing a sale that already has a real due —
+  // otherwise it tracks the Amount field (i.e. "paid in full") the same way
+  // Amount tracks Quantity × Rate, until the person types into it directly.
+  const [amountPaidTouched, setAmountPaidTouched] = useState(
+    () => !!sale && sale.amountPaid < sale.amount
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { push } = useToast();
@@ -137,6 +146,8 @@ function SaleFormBody({
       ? Math.max(0, q * r - d).toFixed(2)
       : "";
   const displayAmount = amountTouched ? form.amount : computedAmount || form.amount;
+  const displayAmountPaid = amountPaidTouched ? form.amountPaid : displayAmount;
+  const dueAmount = Math.max(0, Number(displayAmount || 0) - Number(displayAmountPaid || 0));
 
   const quantityExceedsStock =
     availableStock !== null && form.quantity !== "" && q > availableStock;
@@ -162,6 +173,7 @@ function SaleFormBody({
         rate: Number(form.rate),
         discount: Number(form.discount || 0),
         amount: Number(displayAmount),
+        amountPaid: Number(displayAmountPaid || 0),
         paymentMode: form.paymentMode,
         notes: form.notes,
       };
@@ -331,6 +343,37 @@ function SaleFormBody({
           Only {formatNumber(availableStock ?? 0)} {selectedItem?.unit} in stock.
         </p>
       ) : null}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Amount received (₹)"
+          hint={
+            dueAmount > 0
+              ? `Due: ${formatINR(dueAmount)}`
+              : "Leave as-is if paid in full"
+          }
+        >
+          <Input
+            type="number"
+            min={0}
+            max={Number(displayAmount) || undefined}
+            step="any"
+            value={displayAmountPaid}
+            onChange={(e) => {
+              setAmountPaidTouched(true);
+              setForm({ ...form, amountPaid: e.target.value });
+            }}
+            className={dueAmount > 0 ? "border-brand-gold focus:border-brand-gold" : undefined}
+          />
+        </Field>
+        <Field label="Due (₹)">
+          <div className="flex h-10 items-center rounded-xl border border-border bg-surface-2 px-3.5 text-sm">
+            <span className={dueAmount > 0 ? "font-semibold text-brand-gold" : "text-muted"}>
+              {formatINR(dueAmount)}
+            </span>
+          </div>
+        </Field>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Field

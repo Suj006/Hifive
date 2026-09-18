@@ -165,6 +165,17 @@ function buildFullReportTables(data: ReportsData): ExportTableSpec[] {
       ],
       rows: data.expenseWise,
     },
+    {
+      title: "Outstanding dues by customer",
+      countLabel: `${data.duesByCustomer.length} customers`,
+      emptyText: "No outstanding dues in this range.",
+      columns: [
+        { key: "name", label: "Customer" },
+        { key: "entries", label: "Entries", align: "right" },
+        { key: "due", label: "Due", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.duesByCustomer,
+    },
   ];
 }
 
@@ -378,6 +389,7 @@ export default function ReportsPage() {
           ),
         },
         { label: "Categories sold", value: String(data.categoryWise.length) },
+        { label: "Dues", value: formatINR(data.totals.dueAmount) },
       ],
     });
   }
@@ -591,7 +603,7 @@ export default function ReportsPage() {
         </div>
       ) : (
         <div>
-          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
             <StatCard
               label="Purchases"
               value={formatINR(data.totals.purchaseAmount)}
@@ -625,6 +637,21 @@ export default function ReportsPage() {
               value={String(data.categoryWise.length)}
               icon={<IconTag className="h-5 w-5" />}
               accent="gold"
+            />
+            <StatCard
+              label="Dues"
+              value={formatINR(data.totals.dueAmount)}
+              icon={<IconWallet className="h-5 w-5" />}
+              accent="gold"
+              details={{
+                title: "Customers with dues",
+                emptyText: "Everyone's paid up.",
+                rows: data.duesByCustomer.slice(0, 5).map((d) => ({
+                  label: d.name,
+                  sub: `${d.entries} entr${d.entries === 1 ? "y" : "ies"}`,
+                  value: formatINR(d.due),
+                })),
+              }}
             />
           </div>
 
@@ -775,6 +802,24 @@ export default function ReportsPage() {
                 { key: "category", label: "Category" },
                 { key: "entries", label: "Entries", align: "right" },
                 { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+              ]}
+            />
+
+            <ReportTable
+              title="Outstanding dues by customer"
+              icon={<IconUsers className="h-5 w-5" />}
+              tone="gold"
+              rows={data.duesByCustomer}
+              csvName="outstanding-dues.csv"
+              pngName="outstanding-dues.png"
+              countLabel="customers"
+              emptyText="No outstanding dues in this range."
+              minWidth={420}
+              onExportPngRequest={requestExportPng}
+              columns={[
+                { key: "name", label: "Customer" },
+                { key: "entries", label: "Entries", align: "right" },
+                { key: "due", label: "Due", align: "right", format: (v) => formatINR(v as number) },
               ]}
             />
           </div>

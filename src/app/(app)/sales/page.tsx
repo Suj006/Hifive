@@ -13,8 +13,19 @@ import { useToast } from "@/components/ui/toast";
 import { useRole } from "@/lib/use-role";
 import type { Sale } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
-import { IconPlus, IconEdit, IconTrash, IconSearch, IconTag, IconDownload } from "@/components/icons";
+import { toWhatsAppLink } from "@/lib/whatsapp";
+import {
+  IconPlus,
+  IconEdit,
+  IconTrash,
+  IconSearch,
+  IconTag,
+  IconDownload,
+  IconWallet,
+  IconWhatsApp,
+} from "@/components/icons";
 import { SaleFormModal } from "@/app/(app)/sales/sale-form";
+import { RecordPaymentModal } from "@/app/(app)/sales/record-payment-modal";
 
 export default function SalesPage() {
   const { data, loading, error, refetch } = useApi<Sale[]>("/api/sales");
@@ -26,6 +37,7 @@ export default function SalesPage() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [recordingPayment, setRecordingPayment] = useState<Sale | null>(null);
   const { push } = useToast();
 
   const sales = useMemo(() => {
@@ -43,12 +55,23 @@ export default function SalesPage() {
   }, [data, search]);
 
   const total = sales.reduce((sum, s) => sum + s.amount, 0);
+  const totalDue = sales.reduce((sum, s) => sum + Math.max(0, s.amount - s.amountPaid), 0);
 
   const selectedSales = sales.filter((s) => selected.has(s.id));
   const selectedCustomerIds = new Set(selectedSales.map((s) => s.customerId));
   const multipleCustomers = selectedCustomerIds.size > 1;
   const selectedTotal = selectedSales.reduce((sum, s) => sum + s.amount, 0);
   const allFilteredSelected = sales.length > 0 && sales.every((s) => selected.has(s.id));
+
+  const selectedCustomer = !multipleCustomers ? selectedSales[0]?.customer : undefined;
+  const whatsAppLink = selectedCustomer?.phone
+    ? toWhatsAppLink(
+        selectedCustomer.phone,
+        `Hi ${selectedCustomer.name}, here's your invoice from Hi Five by Jia for ${formatINR(
+          selectedTotal
+        )}. I'll share the PDF right after this — thank you for shopping with us! 💗`
+      )
+    : null;
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -149,6 +172,12 @@ export default function SalesPage() {
           <p className="text-sm text-muted">
             {sales.length} entries · Total{" "}
             <span className="font-semibold text-foreground">{formatINR(total)}</span>
+            {totalDue > 0 ? (
+              <>
+                {" "}
+                · <span className="font-semibold text-brand-gold">{formatINR(totalDue)} due</span>
+              </>
+            ) : null}
           </p>
         ) : null}
       </div>
@@ -164,7 +193,7 @@ export default function SalesPage() {
               </p>
             ) : null}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
               Clear
             </Button>
@@ -176,6 +205,24 @@ export default function SalesPage() {
               <IconDownload className="h-4 w-4" />
               {generatingInvoice ? "Generating…" : "Generate invoice"}
             </Button>
+            {whatsAppLink ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => window.open(whatsAppLink, "_blank", "noopener,noreferrer")}
+              >
+                <IconWhatsApp className="h-4 w-4" /> Share on WhatsApp
+              </Button>
+            ) : !multipleCustomers && selectedCustomer ? (
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled
+                title="Add a phone number for this customer first"
+              >
+                <IconWhatsApp className="h-4 w-4" /> Share on WhatsApp
+              </Button>
+            ) : null}
           </div>
         </Card>
       ) : null}
@@ -206,7 +253,7 @@ export default function SalesPage() {
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[820px] text-sm">
+            <table className="w-full min-w-[920px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="w-10 px-5 py-3 font-medium">
@@ -224,6 +271,7 @@ export default function SalesPage() {
                   <th className="px-5 py-3 font-medium text-right">Qty</th>
                   <th className="px-5 py-3 font-medium text-right">Rate</th>
                   <th className="px-5 py-3 font-medium text-right">Amount</th>
+                  <th className="px-5 py-3 font-medium text-right">Due</th>
                   <th className="px-5 py-3 font-medium">Payment</th>
                   {isAdmin ? (
                     <th className="px-5 py-3 font-medium text-right">Actions</th>
@@ -259,6 +307,13 @@ export default function SalesPage() {
                     <td className="px-5 py-3.5 text-right font-semibold">
                       {formatINR(s.amount)}
                     </td>
+                    <td className="px-5 py-3.5 text-right">
+                      {s.amount - s.amountPaid > 0 ? (
+                        <Badge tone="gold">{formatINR(s.amount - s.amountPaid)}</Badge>
+                      ) : (
+                        <span className="text-muted">—</span>
+                      )}
+                    </td>
                     <td className="px-5 py-3.5">
                       {s.paymentMode ? (
                         <Badge tone="teal">{s.paymentMode}</Badge>
@@ -269,6 +324,16 @@ export default function SalesPage() {
                     {isAdmin ? (
                       <td className="px-5 py-3.5">
                         <div className="flex justify-end gap-1.5">
+                          {s.amount - s.amountPaid > 0 ? (
+                            <button
+                              onClick={() => setRecordingPayment(s)}
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-brand-gold/10 hover:text-brand-gold cursor-pointer"
+                              aria-label="Record payment"
+                              title="Record payment"
+                            >
+                              <IconWallet className="h-4 w-4" />
+                            </button>
+                          ) : null}
                           <button
                             onClick={() => {
                               setEditing(s);
@@ -304,6 +369,12 @@ export default function SalesPage() {
             onClose={() => setFormOpen(false)}
             onSaved={refetch}
             sale={editing}
+          />
+
+          <RecordPaymentModal
+            sale={recordingPayment}
+            onClose={() => setRecordingPayment(null)}
+            onSaved={refetch}
           />
 
           <ConfirmDialog

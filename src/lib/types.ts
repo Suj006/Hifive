@@ -96,6 +96,7 @@ export interface Sale {
   quantity: number;
   rate: number;
   amount: number;
+  amountPaid: number;
   discount: number;
   invoiceNumber: string | null;
   paymentMode: string | null;
@@ -132,12 +133,14 @@ export interface DashboardData {
     profit: number;
     purchaseQty: number;
     saleQty: number;
+    due: number;
   };
   month: { purchases: number; sales: number; expenses: number };
   counts: { items: number; vendors: number; customers: number };
   recentPurchases: Purchase[];
   recentSales: Sale[];
   recentExpenses: Expense[];
+  topDues: { name: string; due: number; entries: number }[];
   lowStock: {
     id: string;
     name: string;
@@ -157,6 +160,7 @@ export interface ReportsData {
     saleAmount: number;
     saleQty: number;
     expenseAmount: number;
+    dueAmount: number;
   };
   itemWisePurchases: {
     itemId: string;
@@ -179,6 +183,7 @@ export interface ReportsData {
   customerWise: { customerId: string; name: string; qty: number; amount: number; entries: number }[];
   categoryWise: { category: string; qty: number; amount: number }[];
   expenseWise: { category: string; amount: number; entries: number }[];
+  duesByCustomer: { customerId: string; name: string; due: number; entries: number }[];
   itemWiseProduction: {
     itemId: string;
     name: string;

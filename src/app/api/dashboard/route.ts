@@ -107,6 +107,20 @@ export async function GET(request: NextRequest) {
     const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
     const totalPurchaseQty = purchases.reduce((s, p) => s + p.quantity, 0);
     const totalSaleQty = sales.reduce((s, sale) => s + sale.quantity, 0);
+    const totalDue = sales.reduce((s, sale) => s + Math.max(0, sale.amount - sale.amountPaid), 0);
+
+    const duesMap = new Map<string, { name: string; due: number; entries: number }>();
+    for (const s of sales) {
+      const due = s.amount - s.amountPaid;
+      if (due <= 0) continue;
+      const entry = duesMap.get(s.customerId) ?? { name: s.customer.name, due: 0, entries: 0 };
+      entry.due += due;
+      entry.entries += 1;
+      duesMap.set(s.customerId, entry);
+    }
+    const topDues = Array.from(duesMap.values())
+      .sort((a, b) => b.due - a.due)
+      .slice(0, 5);
 
     // Trend: monthly buckets, or daily when an explicit range of a month or
     // less is selected. A month/day only appears once something happened in
@@ -220,6 +234,7 @@ export async function GET(request: NextRequest) {
         profit: totalSales - totalPurchases - totalExpenses,
         purchaseQty: totalPurchaseQty,
         saleQty: totalSaleQty,
+        due: totalDue,
       },
       month: {
         purchases: purchaseAggMonth._sum.amount ?? 0,
@@ -234,6 +249,7 @@ export async function GET(request: NextRequest) {
       recentPurchases: purchases.slice(0, 6),
       recentSales: sales.slice(0, 6),
       recentExpenses: expenses.slice(0, 6),
+      topDues,
       lowStock,
       topProducts,
       trend,

@@ -150,6 +150,23 @@ export async function GET(request: NextRequest) {
     }
     const customerWise = Array.from(customerMap.values()).sort((a, b) => b.amount - a.amount);
 
+    // Outstanding dues by customer — partially or unpaid sales in this range.
+    const duesMap = new Map<string, { customerId: string; name: string; due: number; entries: number }>();
+    for (const s of sales) {
+      const due = s.amount - s.amountPaid;
+      if (due <= 0) continue;
+      const entry = duesMap.get(s.customerId) ?? {
+        customerId: s.customerId,
+        name: s.customer.name,
+        due: 0,
+        entries: 0,
+      };
+      entry.due += due;
+      entry.entries += 1;
+      duesMap.set(s.customerId, entry);
+    }
+    const duesByCustomer = Array.from(duesMap.values()).sort((a, b) => b.due - a.due);
+
     // Category-wise sales
     const categoryMap = new Map<string, { category: string; qty: number; amount: number }>();
     for (const s of sales) {
@@ -217,6 +234,7 @@ export async function GET(request: NextRequest) {
       saleAmount: sales.reduce((s, sale) => s + sale.amount, 0),
       saleQty: sales.reduce((s, sale) => s + sale.quantity, 0),
       expenseAmount: expenses.reduce((s, e) => s + e.amount, 0),
+      dueAmount: sales.reduce((s, sale) => s + Math.max(0, sale.amount - sale.amountPaid), 0),
     };
 
     return NextResponse.json({
@@ -229,6 +247,7 @@ export async function GET(request: NextRequest) {
       customerWise,
       categoryWise,
       expenseWise,
+      duesByCustomer,
     });
   });
 }

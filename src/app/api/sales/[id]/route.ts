@@ -15,7 +15,7 @@ export async function PUT(
 
     const existing = await prisma.sale.findUnique({
       where: { id },
-      select: { itemId: true, quantity: true },
+      select: { itemId: true, quantity: true, amountPaid: true },
     });
     if (!existing) return jsonError("Sale not found.", 404);
 
@@ -33,10 +33,13 @@ export async function PUT(
 
     // invoiceNumber is intentionally left untouched — it's assigned once at
     // creation (src/app/api/sales/route.ts) and never regenerated on edit.
+    // amountPaid falls back to whatever it already was, not the full amount
+    // — an omitted field here must never silently clear a recorded due.
     const sale = await prisma.sale.update({
       where: { id },
       data: {
         ...data,
+        amountPaid: data.amountPaid ?? existing.amountPaid,
         paymentMode: data.paymentMode || null,
         notes: data.notes || null,
       },

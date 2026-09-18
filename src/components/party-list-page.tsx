@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -172,7 +173,18 @@ export function PartyListPage({
                     key={p.id}
                     className="border-b border-border/60 last:border-0 hover:bg-white/[0.02]"
                   >
-                    <td className="px-5 py-3.5 font-medium">{p.name}</td>
+                    <td className="px-5 py-3.5 font-medium">
+                      {kind === "customer" ? (
+                        <Link
+                          href={`/customers/${p.id}`}
+                          className="hover:text-brand-pink-2 hover:underline"
+                        >
+                          {p.name}
+                        </Link>
+                      ) : (
+                        p.name
+                      )}
+                    </td>
                     <td className="px-5 py-3.5 text-muted">{p.phone || "—"}</td>
                     <td className="px-5 py-3.5 text-muted">{p.email || "—"}</td>
                     <td className="px-5 py-3.5 text-right text-muted">
