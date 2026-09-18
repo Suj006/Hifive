@@ -3,16 +3,20 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import { prisma } from "@/lib/prisma";
 import { withErrorHandling, jsonError } from "@/lib/api";
 import { SalesInvoiceDocument, type InvoiceLine } from "@/components/invoice/sales-invoice-document";
+import { invoiceDayPrefix } from "@/lib/invoice-number";
 
+// A single selected sale already carries its own self-describing number
+// (HF-YYYYMMDD-NNN, assigned when it was recorded) — reuse it as-is.
+// Combining several sales (which each have their own distinct number) needs
+// a fresh one; it keeps the same date-prefix convention, generated against
+// today (the day this combined invoice is actually being produced), with a
+// "CMB" marker plus a short random tail so two combined invoices made the
+// same day never collide.
 function buildInvoiceNumber(invoiceNumbers: (string | null)[]): string {
   const distinct = new Set(invoiceNumbers.filter((n): n is string => !!n && n.trim() !== ""));
   if (distinct.size === 1) return [...distinct][0];
-  const today = new Date();
-  const stamp = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(
-    today.getDate()
-  ).padStart(2, "0")}`;
-  const rand = Math.random().toString(36).slice(2, 7).toUpperCase();
-  return `HF-${stamp}-${rand}`;
+  const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+  return `${invoiceDayPrefix(new Date())}CMB${rand}`;
 }
 
 export async function GET(request: NextRequest) {

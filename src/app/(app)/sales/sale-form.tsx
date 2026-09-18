@@ -162,7 +162,6 @@ function SaleFormBody({
         rate: Number(form.rate),
         discount: Number(form.discount || 0),
         amount: Number(displayAmount),
-        invoiceNumber: form.invoiceNumber,
         paymentMode: form.paymentMode,
         notes: form.notes,
       };
@@ -334,10 +333,15 @@ function SaleFormBody({
       ) : null}
 
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Invoice No." hint="Optional">
+        <Field
+          label="Invoice No."
+          hint={sale ? "Assigned when this sale was recorded" : "Assigned automatically when you save"}
+        >
           <Input
+            disabled
             value={form.invoiceNumber}
-            onChange={(e) => setForm({ ...form, invoiceNumber: e.target.value })}
+            placeholder={sale ? undefined : "HF-… (auto-generated)"}
+            className="text-muted"
           />
         </Field>
         <Field label="Payment mode">

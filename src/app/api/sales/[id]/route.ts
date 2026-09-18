@@ -31,11 +31,12 @@ export async function PUT(
       );
     }
 
+    // invoiceNumber is intentionally left untouched — it's assigned once at
+    // creation (src/app/api/sales/route.ts) and never regenerated on edit.
     const sale = await prisma.sale.update({
       where: { id },
       data: {
         ...data,
-        invoiceNumber: data.invoiceNumber || null,
         paymentMode: data.paymentMode || null,
         notes: data.notes || null,
       },

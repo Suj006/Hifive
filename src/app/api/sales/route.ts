@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { saleSchema } from "@/lib/schemas";
 import { withErrorHandling, jsonError } from "@/lib/api";
 import { getItemStock } from "@/lib/stock";
+import { invoiceDayPrefix, buildSaleInvoiceNumber } from "@/lib/invoice-number";
 
 export async function GET(request: NextRequest) {
   return withErrorHandling(async () => {
@@ -42,10 +43,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Self-describing invoice number (HF-YYYYMMDD-NNN), scoped to the sale's
+    // own transaction date so a backdated entry still numbers correctly.
+    const countForDay = await prisma.sale.count({
+      where: { invoiceNumber: { startsWith: invoiceDayPrefix(data.date) } },
+    });
+    const invoiceNumber = buildSaleInvoiceNumber(data.date, countForDay + 1);
+
     const sale = await prisma.sale.create({
       data: {
         ...data,
-        invoiceNumber: data.invoiceNumber || null,
+        invoiceNumber,
         paymentMode: data.paymentMode || null,
         notes: data.notes || null,
       },
