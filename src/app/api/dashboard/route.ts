@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
         include: { item: { include: { category: true } }, customer: true },
         orderBy: { date: "desc" },
       }),
-      prisma.expense.findMany({ where: { date: dateFilter } }),
+      prisma.expense.findMany({ where: { date: dateFilter }, orderBy: { date: "desc" } }),
       prisma.purchase.aggregate({
         _sum: { amount: true },
         where: { date: { gte: monthStart } },
@@ -229,6 +229,7 @@ export async function GET(request: NextRequest) {
       },
       recentPurchases: purchases.slice(0, 6),
       recentSales: sales.slice(0, 6),
+      recentExpenses: expenses.slice(0, 6),
       lowStock,
       topProducts,
       trend,

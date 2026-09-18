@@ -199,6 +199,15 @@ export default function DashboardPage() {
               icon={<IconCartDown className="h-5 w-5" />}
               accent="purple"
               sub={`This month: ${formatINR(data.month.purchases)}`}
+              details={{
+                title: "Recent purchases",
+                emptyText: "No purchases recorded yet.",
+                rows: data.recentPurchases.slice(0, 5).map((p) => ({
+                  label: p.item.name,
+                  sub: p.vendor.name,
+                  value: formatINR(p.amount),
+                })),
+              }}
             />
             <StatCard
               label="Total Sales"
@@ -206,6 +215,15 @@ export default function DashboardPage() {
               icon={<IconRupee className="h-5 w-5" />}
               accent="pink"
               sub={`This month: ${formatINR(data.month.sales)}`}
+              details={{
+                title: "Recent sales",
+                emptyText: "No sales recorded yet.",
+                rows: data.recentSales.slice(0, 5).map((s) => ({
+                  label: s.item.name,
+                  sub: s.customer.name,
+                  value: formatINR(s.amount),
+                })),
+              }}
             />
             <StatCard
               label="Total Expenses"
@@ -213,6 +231,15 @@ export default function DashboardPage() {
               icon={<IconWallet className="h-5 w-5" />}
               accent="gold"
               sub={`This month: ${formatINR(data.month.expenses)}`}
+              details={{
+                title: "Recent expenses",
+                emptyText: "No expenses recorded yet.",
+                rows: data.recentExpenses.slice(0, 5).map((e) => ({
+                  label: e.description,
+                  sub: e.category,
+                  value: formatINR(e.amount),
+                })),
+              }}
             />
             <StatCard
               label="Net Profit"
@@ -224,6 +251,15 @@ export default function DashboardPage() {
                   ? { direction: "up", label: "Sales ahead of costs" }
                   : { direction: "down", label: "Costs ahead of sales" }
               }
+              details={{
+                title: "How this is calculated",
+                emptyText: "",
+                rows: [
+                  { label: "Sales", value: formatINR(data.totals.sales) },
+                  { label: "Purchases", value: `-${formatINR(data.totals.purchases)}` },
+                  { label: "Expenses", value: `-${formatINR(data.totals.expenses)}` },
+                ],
+              }}
             />
             <StatCard
               label="Active Items"

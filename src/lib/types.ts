@@ -137,6 +137,7 @@ export interface DashboardData {
   counts: { items: number; vendors: number; customers: number };
   recentPurchases: Purchase[];
   recentSales: Sale[];
+  recentExpenses: Expense[];
   lowStock: {
     id: string;
     name: string;

@@ -39,7 +39,15 @@ export function formatDate(value: string | Date): string {
 
 export function toDateInputValue(value: string | Date): string {
   const date = typeof value === "string" ? new Date(value) : value;
-  return date.toISOString().slice(0, 10);
+  // Local calendar-date components, not toISOString() (which converts to
+  // UTC first) — for anyone east of UTC (e.g. India, UTC+5:30), a local
+  // midnight Date shifted to UTC lands on the previous day, so "This year"
+  // was starting from 31 Dec instead of 1 Jan, and a new entry's default
+  // date rolled back to yesterday before ~5:30am local time.
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function todayInputValue(): string {
