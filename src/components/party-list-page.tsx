@@ -12,8 +12,17 @@ import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { useRole } from "@/lib/use-role";
 import type { Customer, Vendor } from "@/lib/types";
-import { IconPlus, IconEdit, IconTrash, IconSearch } from "@/components/icons";
+import { IconPlus, IconEdit, IconTrash, IconSearch, IconUpload } from "@/components/icons";
 import { PartyFormModal } from "@/components/party-form";
+import { CsvImportModal, type CsvColumn } from "@/components/import/csv-import-modal";
+
+const PARTY_IMPORT_COLUMNS: CsvColumn[] = [
+  { key: "name", label: "Name", required: true },
+  { key: "phone", label: "Phone" },
+  { key: "email", label: "Email" },
+  { key: "address", label: "Address" },
+  { key: "notes", label: "Notes" },
+];
 
 type Party = Vendor | Customer;
 
@@ -37,7 +46,13 @@ export function PartyListPage({
   const [editing, setEditing] = useState<Party | null>(null);
   const [deleting, setDeleting] = useState<Party | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const { push } = useToast();
+
+  const existingKeys = useMemo(
+    () => new Set((data ?? []).map((p) => p.name.trim().toLowerCase())),
+    [data]
+  );
 
   const parties = useMemo(() => {
     let list = data ?? [];
@@ -79,14 +94,19 @@ export function PartyListPage({
         description={description}
         action={
           isAdmin ? (
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()}
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <IconUpload className="h-4 w-4" /> Import CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                <IconPlus className="h-4 w-4" /> Add {label.toLowerCase()}
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -213,6 +233,24 @@ export function PartyListPage({
             title={`Delete ${label.toLowerCase()}?`}
             description={`This will permanently remove "${deleting?.name}".`}
             loading={deleteLoading}
+          />
+
+          <CsvImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            onImported={refetch}
+            title={`Import ${label.toLowerCase()}s from CSV`}
+            entityLabelPlural={`${label.toLowerCase()}s`}
+            columns={PARTY_IMPORT_COLUMNS}
+            templateFilename={`${kind}s-template.csv`}
+            existingKeys={existingKeys}
+            dedupeKey={(row) => row.name.trim().toLowerCase()}
+            importRows={(rows) =>
+              apiRequest(`${endpoint}/bulk-import`, {
+                method: "POST",
+                body: JSON.stringify({ rows }),
+              })
+            }
           />
         </>
       ) : null}

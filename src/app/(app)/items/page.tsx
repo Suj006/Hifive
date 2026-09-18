@@ -11,13 +11,26 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useApi, apiRequest } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { useRole } from "@/lib/use-role";
-import type { Item, ItemType } from "@/lib/types";
+import type { Item, ItemType, ProductName } from "@/lib/types";
 import { formatNumber } from "@/lib/format";
-import { IconPlus, IconEdit, IconTrash, IconSearch, IconLayers } from "@/components/icons";
+import { IconPlus, IconEdit, IconTrash, IconSearch, IconLayers, IconUpload } from "@/components/icons";
 import { ItemFormModal } from "@/app/(app)/items/item-form";
+import { CsvImportModal, type CsvColumn } from "@/components/import/csv-import-modal";
+
+const ITEM_IMPORT_COLUMNS: CsvColumn[] = [
+  { key: "name", label: "Name", required: true },
+  { key: "type", label: "Type", required: true },
+  { key: "unit", label: "Unit", required: true },
+  { key: "group", label: "Group" },
+  { key: "category", label: "Category" },
+  { key: "openingStock", label: "Opening Stock" },
+  { key: "reorderLevel", label: "Reorder Level" },
+  { key: "notes", label: "Notes" },
+];
 
 export default function ItemsPage() {
   const { data, loading, error, refetch } = useApi<Item[]>("/api/items");
+  const { data: productNames } = useApi<ProductName[]>("/api/product-names");
   const { isAdmin } = useRole();
   const [tab, setTab] = useState<ItemType | "ALL">("ALL");
   const [search, setSearch] = useState("");
@@ -25,7 +38,26 @@ export default function ItemsPage() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [deleting, setDeleting] = useState<Item | null>(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const { push } = useToast();
+
+  // Keyed the same way the CSV rows are (name|type|category NAME), not by
+  // categoryId — the import preview never sees ids, only what's in the file.
+  // The server does the authoritative id-based dedupe check on submit.
+  const existingItemKeys = useMemo(
+    () =>
+      new Set(
+        (data ?? []).map(
+          (i) =>
+            `${i.name.trim().toLowerCase()}|${i.type}|${(i.category?.name ?? "").trim().toLowerCase()}`
+        )
+      ),
+    [data]
+  );
+  const knownProductNames = useMemo(
+    () => new Set((productNames ?? []).map((p) => p.name.trim().toLowerCase())),
+    [productNames]
+  );
 
   const items = useMemo(() => {
     let list = data ?? [];
@@ -65,14 +97,19 @@ export default function ItemsPage() {
         description="Raw materials and finished products used across purchases & sales."
         action={
           isAdmin ? (
-            <Button
-              onClick={() => {
-                setEditing(null);
-                setFormOpen(true);
-              }}
-            >
-              <IconPlus className="h-4 w-4" /> Add item
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                <IconUpload className="h-4 w-4" /> Import CSV
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditing(null);
+                  setFormOpen(true);
+                }}
+              >
+                <IconPlus className="h-4 w-4" /> Add item
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -258,6 +295,36 @@ export default function ItemsPage() {
             title="Delete item?"
             description={`This will permanently remove "${deleting?.name}" from the item master.`}
             loading={deleteLoading}
+          />
+
+          <CsvImportModal
+            open={importOpen}
+            onClose={() => setImportOpen(false)}
+            onImported={refetch}
+            title="Import items from CSV"
+            entityLabelPlural="items"
+            columns={ITEM_IMPORT_COLUMNS}
+            templateFilename="items-template.csv"
+            existingKeys={existingItemKeys}
+            dedupeKey={(row) =>
+              `${row.name.trim().toLowerCase()}|${row.type.trim().toUpperCase()}|${(row.category ?? "").trim().toLowerCase()}`
+            }
+            rowError={(row) => {
+              const type = row.type?.trim().toUpperCase();
+              if (type !== "RAW_MATERIAL" && type !== "PRODUCT") {
+                return 'Type must be "RAW_MATERIAL" or "PRODUCT"';
+              }
+              if (type === "PRODUCT" && !knownProductNames.has(row.name.trim().toLowerCase())) {
+                return "Add this name to Product Names master first";
+              }
+              return null;
+            }}
+            importRows={(rows) =>
+              apiRequest("/api/items/bulk-import", {
+                method: "POST",
+                body: JSON.stringify({ rows }),
+              })
+            }
           />
         </>
       ) : null}

@@ -232,6 +232,20 @@ export const IconDownload = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const IconUpload = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M12 21V9" />
+    <path d="m7 14 5-5 5 5" />
+    <path d="M4 19.5h16" />
+  </svg>
+);
+
+export const IconCheck = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 export const IconImage = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base(props)}>
     <rect x="3" y="4" width="18" height="16" rx="2.5" />
