@@ -24,6 +24,28 @@ export interface ProductName {
   _count?: { items: number };
 }
 
+export interface RawMaterialName {
+  id: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+  _count?: { items: number };
+}
+
+export type CouponDiscountType = "PERCENT" | "FLAT";
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discountType: CouponDiscountType;
+  value: number;
+  maxDiscount: number | null;
+  notes: string | null;
+  isActive: boolean;
+  createdAt: string;
+  _count?: { sales: number };
+}
+
 export interface Item {
   id: string;
   code: string;
@@ -57,6 +79,7 @@ export interface Vendor {
   isActive: boolean;
   createdAt: string;
   _count?: { purchases: number };
+  totalPurchased?: number;
 }
 
 export interface Customer {
@@ -72,6 +95,7 @@ export interface Customer {
   isActive: boolean;
   createdAt: string;
   _count?: { sales: number };
+  totalSpent?: number;
 }
 
 export interface Purchase {
@@ -102,6 +126,10 @@ export interface Sale {
   amount: number;
   amountPaid: number;
   discount: number;
+  discountType: "FLAT" | "PERCENT";
+  couponId: string | null;
+  couponCode: string | null;
+  couponDiscount: number;
   invoiceNumber: string | null;
   paymentMode: string | null;
   notes: string | null;
@@ -145,6 +173,7 @@ export interface DashboardData {
   recentSales: Sale[];
   recentExpenses: Expense[];
   topDues: { name: string; due: number; entries: number }[];
+  topCustomers: { id: string; code: string; name: string; totalSpent: number; orders: number }[];
   lowStock: {
     id: string;
     name: string;

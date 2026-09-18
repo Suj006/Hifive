@@ -276,3 +276,21 @@ export const IconWhatsApp = (props: SVGProps<SVGSVGElement>) => (
     <path d="M8.7 8.8c.2-.5.4-.5.6-.5h.5c.15 0 .35 0 .5.4.2.5.65 1.7.7 1.85.05.15.1.3 0 .5-.1.2-.15.3-.3.45-.15.15-.3.3-.15.55.15.3.7 1.1 1.5 1.8 1 .9 1.8 1.2 2.1 1.35.3.15.45.1.6-.05.15-.15.65-.75.85-1 .2-.25.4-.2.65-.1.25.1 1.6.75 1.85.9.25.15.4.2.45.35.06.15.06.75-.2 1.45-.25.7-1.45 1.35-2 1.4-.5.05-1.15.05-1.85-.1-.4-.1-.95-.3-1.65-.6-2.9-1.25-4.8-4.15-4.95-4.35-.15-.2-1.15-1.55-1.15-2.95 0-1.4.75-2.1 1-2.35Z" fill="currentColor" stroke="none" />
   </svg>
 );
+
+export const IconCoupon = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1.5a1.8 1.8 0 0 0 0 3V15a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-1.5a1.8 1.8 0 0 0 0-3Z" />
+    <path d="M9.5 7v10" strokeDasharray="2 2.2" />
+  </svg>
+);
+
+export const IconTrophy = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M7 4h10v5a5 5 0 0 1-10 0Z" />
+    <path d="M7 5H4v1.5A3.5 3.5 0 0 0 7 10" />
+    <path d="M17 5h3v1.5A3.5 3.5 0 0 1 17 10" />
+    <path d="M12 13.5V17" />
+    <path d="M8.5 20h7" />
+    <path d="M10 17h4l.6 3H9.4Z" />
+  </svg>
+);

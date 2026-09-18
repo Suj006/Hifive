@@ -8,9 +8,16 @@ export async function GET() {
   return withErrorHandling(async () => {
     const customers = await prisma.customer.findMany({
       orderBy: { name: "asc" },
-      include: { _count: { select: { sales: true } } },
+      include: {
+        _count: { select: { sales: true } },
+        sales: { select: { amount: true } },
+      },
     });
-    return NextResponse.json(customers);
+    const withTotals = customers.map(({ sales, ...c }) => ({
+      ...c,
+      totalSpent: sales.reduce((s, sale) => s + sale.amount, 0),
+    }));
+    return NextResponse.json(withTotals);
   });
 }
 

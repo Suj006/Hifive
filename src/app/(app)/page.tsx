@@ -32,6 +32,9 @@ import {
   IconChart,
   IconCalendar,
   IconClose,
+  IconTrophy,
+  IconCoupon,
+  IconBox,
 } from "@/components/icons";
 
 // Client-only: its initial open/closed state depends on localStorage, so it
@@ -439,6 +442,41 @@ export default function DashboardPage() {
                   )}
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center gap-2">
+                    <IconTrophy className="h-4 w-4 text-brand-gold" />
+                    <CardTitle>Top customers</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {data.topCustomers.length === 0 ? (
+                    <p className="text-sm text-muted">No sales recorded yet.</p>
+                  ) : (
+                    <ul className="space-y-3">
+                      {data.topCustomers.map((c, i) => (
+                        <li key={c.id} className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[image:var(--gradient-brand-soft)] text-[10px] font-bold">
+                              {i + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-medium">{c.name}</p>
+                              <p className="text-xs text-muted">
+                                {c.orders} order{c.orders === 1 ? "" : "s"}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-sm font-semibold">
+                            {formatINR(c.totalSpent, true)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
 
@@ -482,7 +520,7 @@ export default function DashboardPage() {
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
               Manage
             </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-9">
               <ManageTile
                 href="/items"
                 icon={<IconLayers className="h-5 w-5" />}
@@ -495,6 +533,12 @@ export default function DashboardPage() {
                 icon={<IconClipboard className="h-5 w-5" />}
                 label="Product Names"
                 tone="purple"
+              />
+              <ManageTile
+                href="/raw-material-names"
+                icon={<IconBox className="h-5 w-5" />}
+                label="Raw Material Names"
+                tone="teal"
               />
               <ManageTile
                 href="/categories"
@@ -515,6 +559,12 @@ export default function DashboardPage() {
                 label="Customers"
                 count={data.counts.customers}
                 tone="pink"
+              />
+              <ManageTile
+                href="/coupons"
+                icon={<IconCoupon className="h-5 w-5" />}
+                label="Coupons"
+                tone="gold"
               />
               <ManageTile
                 href="/expenses"

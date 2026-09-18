@@ -26,13 +26,15 @@ export async function POST(request: NextRequest) {
     const rows = Array.isArray(body.rows) ? (body.rows as ImportRow[]) : [];
     if (rows.length === 0) return jsonError("No rows to import", 400);
 
-    const [categories, productNames, existingItems] = await Promise.all([
+    const [categories, productNames, rawMaterialNames, existingItems] = await Promise.all([
       prisma.category.findMany({ select: { id: true, name: true } }),
       prisma.productName.findMany({ select: { name: true } }),
+      prisma.rawMaterialName.findMany({ select: { name: true } }),
       prisma.item.findMany({ select: { variantKey: true, type: true } }),
     ]);
     const categoryByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]));
     const knownProductNames = new Set(productNames.map((p) => p.name.trim().toLowerCase()));
+    const knownRawMaterialNames = new Set(rawMaterialNames.map((p) => p.name.trim().toLowerCase()));
     const existingVariantKeys = new Set(existingItems.map((i) => i.variantKey));
     const seenInBatch = new Set<string>();
     const sequence: Record<ItemType, number> = {
@@ -51,6 +53,10 @@ export async function POST(request: NextRequest) {
         continue;
       }
       if (type === "PRODUCT" && !knownProductNames.has(name.toLowerCase())) {
+        skipped++;
+        continue;
+      }
+      if (type === "RAW_MATERIAL" && !knownRawMaterialNames.has(name.toLowerCase())) {
         skipped++;
         continue;
       }

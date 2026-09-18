@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { withErrorHandling, jsonError } from "@/lib/api";
 import { SalesInvoiceDocument, type InvoiceLine } from "@/components/invoice/sales-invoice-document";
 import { invoiceDayPrefix } from "@/lib/invoice-number";
+import { manualDiscountAmount } from "@/lib/sale-math";
 
 // A single selected sale already carries its own self-describing number
 // (HF-YYYYMMDD-NNN, assigned when it was recorded) — reuse it as-is.
@@ -46,7 +47,11 @@ export async function GET(request: NextRequest) {
       unit: s.item.unit,
       quantity: s.quantity,
       rate: s.rate,
-      discount: s.discount,
+      // `s.discount` may be a percentage rather than rupees (discountType) —
+      // this is the actual rupee reduction, manual discount plus coupon.
+      discount:
+        manualDiscountAmount(s.quantity * s.rate, s.discountType as "FLAT" | "PERCENT", s.discount) +
+        s.couponDiscount,
       amount: s.amount,
     }));
     const paymentModes = [...new Set(sales.map((s) => s.paymentMode).filter((m): m is string => !!m))];

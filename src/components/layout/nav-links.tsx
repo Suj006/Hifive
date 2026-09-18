@@ -10,6 +10,8 @@ import {
   IconSparkle,
   IconClipboard,
   IconWallet,
+  IconBox,
+  IconCoupon,
 } from "@/components/icons";
 
 export const dashboardLink = { href: "/", label: "Dashboard", icon: IconDashboard } as const;
@@ -18,9 +20,11 @@ export const dashboardLink = { href: "/", label: "Dashboard", icon: IconDashboar
 export const masterLinks = [
   { href: "/items", label: "Item Master", icon: IconLayers },
   { href: "/product-names", label: "Product Names", icon: IconClipboard },
+  { href: "/raw-material-names", label: "Raw Material Names", icon: IconBox },
   { href: "/categories", label: "Categories", icon: IconFilter },
   { href: "/vendors", label: "Vendors", icon: IconTruck },
   { href: "/customers", label: "Customers", icon: IconUsers },
+  { href: "/coupons", label: "Coupons", icon: IconCoupon },
 ] as const;
 
 // Day-to-day transactions.

@@ -53,6 +53,34 @@ export const productNameSchema = z.object({
   isActive: z.coerce.boolean().default(true),
 });
 
+export const rawMaterialNameSchema = z.object({
+  name: z.string().trim().min(1, "Name is required").max(80),
+  isActive: z.coerce.boolean().default(true),
+});
+
+export const couponDiscountTypeSchema = z.enum(["PERCENT", "FLAT"]);
+
+export const couponSchema = z
+  .object({
+    code: z
+      .string()
+      .trim()
+      .min(1, "Coupon code is required")
+      .max(40)
+      .transform((s) => s.toUpperCase()),
+    discountType: couponDiscountTypeSchema,
+    value: z.coerce.number().positive("Value must be greater than 0"),
+    // Only meaningful for PERCENT coupons — caps the rupee discount. Omitted
+    // (not sent) means uncapped.
+    maxDiscount: z.coerce.number().positive("Max discount must be greater than 0").optional(),
+    notes: z.string().trim().max(500).optional().or(z.literal("")),
+    isActive: z.coerce.boolean().default(true),
+  })
+  .refine((data) => data.discountType !== "PERCENT" || data.value <= 100, {
+    message: "A percentage discount can't be more than 100",
+    path: ["value"],
+  });
+
 export const productionSchema = z.object({
   date: z.coerce.date(),
   itemId: z.string().min(1, "Product is required"),
@@ -127,6 +155,15 @@ export const saleSchema = z
     quantity: z.coerce.number().positive("Quantity must be greater than 0"),
     rate: z.coerce.number().min(0, "Rate cannot be negative"),
     discount: z.coerce.number().min(0).default(0),
+    // How `discount` is interpreted — a rupee amount, or a percentage of
+    // quantity*rate. Defaults to FLAT so callers that don't know about this
+    // yet keep their existing rupee-discount behavior.
+    discountType: z.enum(["FLAT", "PERCENT"]).default("FLAT"),
+    // Snapshot fields for an applied coupon — the code (for display/audit)
+    // and the rupee amount it worked out to (already capped, computed
+    // client-side the same way the rest of this form's totals are).
+    couponCode: z.string().trim().max(40).optional().or(z.literal("")),
+    couponDiscount: z.coerce.number().min(0).default(0),
     amount: z.coerce.number().min(0, "Amount cannot be negative"),
     // Optional — omitted (or left blank) means "paid in full", handled by
     // the route itself so callers that don't know about dues yet still work.
@@ -137,6 +174,10 @@ export const saleSchema = z
   .refine((data) => data.amountPaid === undefined || data.amountPaid <= data.amount, {
     message: "Amount received can't be more than the sale amount",
     path: ["amountPaid"],
+  })
+  .refine((data) => data.discountType !== "PERCENT" || data.discount <= 100, {
+    message: "Discount percentage can't be more than 100",
+    path: ["discount"],
   });
 
 export const recordPaymentSchema = z.object({

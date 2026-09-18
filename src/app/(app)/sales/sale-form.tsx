@@ -8,10 +8,22 @@ import { Combobox } from "@/components/ui/combobox";
 import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
 import { todayInputValue, toDateInputValue, formatNumber, formatINR } from "@/lib/format";
-import type { Customer, Item, Sale } from "@/lib/types";
+import type { Coupon, Customer, Item, Sale } from "@/lib/types";
 import { PAYMENT_MODES } from "@/lib/constants";
+import { manualDiscountAmount, couponDiscountAmount, type DiscountType } from "@/lib/sale-math";
+import { cn } from "@/lib/cn";
 
 const NO_CATEGORY = "__none__";
+
+function describeCoupon(coupon: Coupon): string {
+  const off =
+    coupon.discountType === "PERCENT"
+      ? `${formatNumber(coupon.value)}% off${
+          coupon.maxDiscount != null ? `, up to ${formatINR(coupon.maxDiscount)}` : ""
+        }`
+      : `${formatINR(coupon.value)} off`;
+  return off;
+}
 
 interface FormState {
   date: string;
@@ -21,6 +33,8 @@ interface FormState {
   quantity: string;
   rate: string;
   discount: string;
+  discountType: DiscountType;
+  couponId: string;
   amount: string;
   amountPaid: string;
   invoiceNumber: string;
@@ -38,6 +52,8 @@ function initialState(sale: Sale | null): FormState {
       quantity: String(sale.quantity),
       rate: String(sale.rate),
       discount: String(sale.discount),
+      discountType: sale.discountType,
+      couponId: sale.couponId ?? "",
       amount: String(sale.amount),
       amountPaid: String(sale.amountPaid),
       invoiceNumber: sale.invoiceNumber ?? "",
@@ -53,6 +69,8 @@ function initialState(sale: Sale | null): FormState {
     quantity: "",
     rate: "",
     discount: "0",
+    discountType: "FLAT",
+    couponId: "",
     amount: "",
     amountPaid: "",
     invoiceNumber: "",
@@ -92,6 +110,7 @@ function SaleFormBody({
 }) {
   const { data: items } = useApi<Item[]>("/api/items?type=PRODUCT");
   const { data: customers } = useApi<Customer[]>("/api/customers");
+  const { data: coupons } = useApi<Coupon[]>("/api/coupons");
   const [form, setForm] = useState<FormState>(() => initialState(sale));
   // Always starts "untouched" (even when editing) so the Amount field keeps
   // auto-recalculating from Quantity/Rate/Discount until the person types
@@ -110,6 +129,7 @@ function SaleFormBody({
 
   const activeItems = (items ?? []).filter((i) => i.isActive || i.id === sale?.itemId);
   const activeCustomers = (customers ?? []).filter((c) => c.isActive || c.id === sale?.customerId);
+  const activeCoupons = (coupons ?? []).filter((c) => c.isActive || c.id === sale?.couponId);
 
   const customerOptions = useMemo(
     () =>
@@ -120,6 +140,7 @@ function SaleFormBody({
       })),
     [activeCustomers]
   );
+  const selectedCustomer = activeCustomers.find((c) => c.id === form.customerId) ?? null;
 
   const productNames = useMemo(
     () => Array.from(new Set(activeItems.map((i) => i.name))).sort(),
@@ -152,10 +173,18 @@ function SaleFormBody({
   const q = Number(form.quantity);
   const r = Number(form.rate);
   const d = Number(form.discount || 0);
-  const computedAmount =
-    Number.isFinite(q) && Number.isFinite(r) && form.quantity !== "" && form.rate !== ""
-      ? Math.max(0, q * r - d).toFixed(2)
-      : "";
+  const hasQuantityAndRate =
+    Number.isFinite(q) && Number.isFinite(r) && form.quantity !== "" && form.rate !== "";
+  const subtotal = hasQuantityAndRate ? q * r : 0;
+  const manualDiscountAmt = hasQuantityAndRate
+    ? manualDiscountAmount(subtotal, form.discountType, d)
+    : 0;
+  const selectedCoupon = activeCoupons.find((c) => c.id === form.couponId) ?? null;
+  const couponDiscountAmt =
+    hasQuantityAndRate && selectedCoupon ? couponDiscountAmount(subtotal, selectedCoupon) : 0;
+  const computedAmount = hasQuantityAndRate
+    ? Math.max(0, subtotal - manualDiscountAmt - couponDiscountAmt).toFixed(2)
+    : "";
   const displayAmount = amountTouched ? form.amount : computedAmount || form.amount;
   const displayAmountPaid = amountPaidTouched ? form.amountPaid : displayAmount;
   const dueAmount = Math.max(0, Number(displayAmount || 0) - Number(displayAmountPaid || 0));
@@ -187,6 +216,9 @@ function SaleFormBody({
         quantity: Number(form.quantity),
         rate: Number(form.rate),
         discount: Number(form.discount || 0),
+        discountType: form.discountType,
+        couponCode: selectedCoupon?.code ?? "",
+        couponDiscount: couponDiscountAmt,
         amount: Number(displayAmount),
         amountPaid: Number(displayAmountPaid || 0),
         paymentMode: form.paymentMode,
@@ -292,7 +324,9 @@ function SaleFormBody({
       <Field
         label="Customer"
         hint={
-          activeCustomers.length === 0
+          selectedCustomer && selectedCustomer.totalSpent !== undefined
+            ? `Past purchases: ${formatINR(selectedCustomer.totalSpent)} — for your reference only, not shown on the invoice`
+            : activeCustomers.length === 0
             ? "Add a customer first"
             : "Search by name or phone — same names are shown with their code/phone"
         }
@@ -329,14 +363,36 @@ function SaleFormBody({
             onChange={(e) => setForm({ ...form, rate: e.target.value })}
           />
         </Field>
-        <Field label="Discount (₹)">
-          <Input
-            type="number"
-            min={0}
-            step="any"
-            value={form.discount}
-            onChange={(e) => setForm({ ...form, discount: e.target.value })}
-          />
+        <Field label="Discount">
+          <div className="flex gap-1.5">
+            <Input
+              type="number"
+              min={0}
+              max={form.discountType === "PERCENT" ? 100 : undefined}
+              step="any"
+              value={form.discount}
+              onChange={(e) => setForm({ ...form, discount: e.target.value })}
+              className="min-w-0 flex-1"
+            />
+            <div className="flex shrink-0 rounded-xl border border-border bg-surface-2 p-0.5">
+              {(["FLAT", "PERCENT"] as const).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setForm({ ...form, discountType: t })}
+                  className={cn(
+                    "rounded-lg px-2.5 text-sm font-semibold transition-colors cursor-pointer",
+                    form.discountType === t
+                      ? "bg-[image:var(--gradient-brand)] text-white"
+                      : "text-muted hover:text-foreground"
+                  )}
+                  aria-pressed={form.discountType === t}
+                >
+                  {t === "FLAT" ? "₹" : "%"}
+                </button>
+              ))}
+            </div>
+          </div>
         </Field>
         <Field label="Amount (₹)">
           <Input
@@ -357,6 +413,38 @@ function SaleFormBody({
           Only {formatNumber(availableStock ?? 0)} {selectedItem?.unit} in stock.
         </p>
       ) : null}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Coupon"
+          hint={
+            selectedCoupon
+              ? describeCoupon(selectedCoupon)
+              : activeCoupons.length === 0
+              ? "No coupons yet"
+              : "Optional"
+          }
+        >
+          <Select
+            value={form.couponId}
+            onChange={(e) => setForm({ ...form, couponId: e.target.value })}
+          >
+            <option value="">No coupon</option>
+            {activeCoupons.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.code}
+              </option>
+            ))}
+          </Select>
+        </Field>
+        <Field label="Coupon discount (₹)">
+          <div className="flex h-10 items-center rounded-xl border border-border bg-surface-2 px-3.5 text-sm">
+            <span className={couponDiscountAmt > 0 ? "font-semibold text-brand-teal" : "text-muted"}>
+              {formatINR(couponDiscountAmt)}
+            </span>
+          </div>
+        </Field>
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Field

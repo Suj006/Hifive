@@ -50,6 +50,32 @@ model ProductName {
   createdAt DateTime @default(now())
 }
 
+// Master list of raw material names — e.g. Silk Thread — Pink, Metal Charm —
+// Heart. Same idea as ProductName: selected (not free-typed) when adding a
+// RAW_MATERIAL item, so the same material isn't entered under slightly
+// different spellings each time.
+model RawMaterialName {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+// Discount codes an admin can create — either a percentage off (with an
+// optional rupee cap) or a flat rupee amount. Applied to a Sale by code.
+model Coupon {
+  id           String   @id @default(cuid())
+  code         String   @unique // e.g. ONAM2026 — always stored uppercase
+  discountType String // "PERCENT" | "FLAT"
+  value        Float // percent (0-100) if PERCENT, else a flat rupee amount
+  maxDiscount  Float? // caps the rupee discount — only meaningful for PERCENT
+  notes        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  sales        Sale[]
+}
+
 model Item {
   id           String    @id @default(cuid())
   code         String    @unique // auto-generated, e.g. RM-0001 / PD-0001
@@ -143,7 +169,20 @@ model Sale {
   // amount (paid in full) unless a partial payment is recorded, so
   // `amount - amountPaid` is the outstanding due for this sale.
   amountPaid    Float    @default(0)
+  // `discount` is either a rupee amount or a percentage of quantity*rate,
+  // depending on discountType — historical rows default to FLAT so their
+  // existing rupee-denominated values keep meaning what they always meant.
   discount      Float    @default(0)
+  discountType  String   @default("FLAT") // "FLAT" | "PERCENT"
+  couponId      String?
+  coupon        Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  // Snapshot of the coupon's code at the time of sale, so it still reads
+  // correctly even if the coupon is later renamed or deleted.
+  couponCode    String?
+  // Actual rupee amount the coupon discounted (after any max-discount cap),
+  // stored for audit/invoice display since a PERCENT coupon's raw `value`
+  // alone wouldn't say what it worked out to in rupees for this sale.
+  couponDiscount Float   @default(0)
   invoiceNumber String?
   paymentMode   String?
   notes         String?
@@ -153,6 +192,7 @@ model Sale {
   @@index([itemId])
   @@index([customerId])
   @@index([date])
+  @@index([couponId])
 }
 
 // Any spend that isn't a raw material purchase — packaging, shipping, rent,

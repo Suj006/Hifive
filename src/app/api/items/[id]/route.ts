@@ -23,6 +23,14 @@ export async function PUT(
           422
         );
       }
+    } else {
+      const known = await prisma.rawMaterialName.findUnique({ where: { name: data.name } });
+      if (!known) {
+        return jsonError(
+          "Please add this raw material to the Raw Material Name master first.",
+          422
+        );
+      }
     }
 
     const conflict = await prisma.item.findUnique({ where: { variantKey } });

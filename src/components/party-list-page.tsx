@@ -16,6 +16,7 @@ import type { Customer, Vendor } from "@/lib/types";
 import { IconPlus, IconEdit, IconTrash, IconSearch, IconUpload } from "@/components/icons";
 import { PartyFormModal } from "@/components/party-form";
 import { CsvImportModal, type CsvColumn } from "@/components/import/csv-import-modal";
+import { formatINR } from "@/lib/format";
 
 const PARTY_IMPORT_COLUMNS: CsvColumn[] = [
   { key: "name", label: "Name", required: true },
@@ -89,6 +90,9 @@ export function PartyListPage({
       ? (p._count as { purchases: number }).purchases
       : (p._count as { sales: number }).sales;
 
+  const totalAmount = (p: Party) =>
+    kind === "vendor" ? (p as Vendor).totalPurchased ?? 0 : (p as Customer).totalSpent ?? 0;
+
   return (
     <div>
       <PageHeader
@@ -153,7 +157,7 @@ export function PartyListPage({
           />
         ) : (
           <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full min-w-[740px] text-sm">
+            <table className="w-full min-w-[860px] text-sm">
               <thead>
                 <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
                   <th className="px-5 py-3 font-medium">Code</th>
@@ -162,6 +166,9 @@ export function PartyListPage({
                   <th className="px-5 py-3 font-medium">Email</th>
                   <th className="px-5 py-3 font-medium text-right">
                     {kind === "vendor" ? "Purchases" : "Sales"}
+                  </th>
+                  <th className="px-5 py-3 font-medium text-right">
+                    {kind === "vendor" ? "Total Purchased" : "Total Spent"}
                   </th>
                   <th className="px-5 py-3 font-medium">Status</th>
                   {isAdmin ? (
@@ -194,6 +201,9 @@ export function PartyListPage({
                     <td className="px-5 py-3.5 text-muted">{p.email || "—"}</td>
                     <td className="px-5 py-3.5 text-right text-muted">
                       {entryCount(p)}
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-semibold">
+                      {formatINR(totalAmount(p))}
                     </td>
                     <td className="px-5 py-3.5">
                       {p.isActive ? (

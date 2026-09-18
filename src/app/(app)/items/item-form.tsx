@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import { apiRequest, useApi } from "@/lib/use-api";
 import { useToast } from "@/components/ui/toast";
-import type { Category, Item, ItemType, ProductName } from "@/lib/types";
+import type { Category, Item, ItemType, ProductName, RawMaterialName } from "@/lib/types";
 import { UNIT_OPTIONS } from "@/lib/units";
 
 interface FormState {
@@ -104,6 +104,10 @@ function ItemFormBody({
   const activeProductNames = (productNames ?? []).filter(
     (p) => p.isActive || p.name === item?.name
   );
+  const { data: rawMaterialNames } = useApi<RawMaterialName[]>("/api/raw-material-names");
+  const activeRawMaterialNames = (rawMaterialNames ?? []).filter(
+    (p) => p.isActive || p.name === item?.name
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -197,13 +201,31 @@ function ItemFormBody({
           </Select>
         </Field>
       ) : (
-        <Field label="Item name">
-          <Input
+        <Field
+          label="Raw material name"
+          hint={
+            activeRawMaterialNames.length === 0 ? (
+              <>
+                No raw material names yet —{" "}
+                <Link href="/raw-material-names" className="underline">
+                  add one
+                </Link>
+              </>
+            ) : undefined
+          }
+        >
+          <Select
             required
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            placeholder="e.g. Silk Thread — Pink"
-          />
+          >
+            <option value="">Select raw material</option>
+            {activeRawMaterialNames.map((p) => (
+              <option key={p.id} value={p.name}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
         </Field>
       )}
 

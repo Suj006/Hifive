@@ -31,6 +31,21 @@ export async function PUT(
       );
     }
 
+    let couponId: string | null = null;
+    let couponCode: string | null = null;
+    let couponDiscount = 0;
+    if (data.couponCode) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { code: data.couponCode.trim().toUpperCase() },
+      });
+      if (!coupon) {
+        return jsonError("That coupon code wasn't found. Remove it or pick a valid one.", 422);
+      }
+      couponId = coupon.id;
+      couponCode = coupon.code;
+      couponDiscount = data.couponDiscount;
+    }
+
     // invoiceNumber is intentionally left untouched — it's assigned once at
     // creation (src/app/api/sales/route.ts) and never regenerated on edit.
     // amountPaid falls back to whatever it already was, not the full amount
@@ -38,12 +53,22 @@ export async function PUT(
     const sale = await prisma.sale.update({
       where: { id },
       data: {
-        ...data,
+        date: data.date,
+        itemId: data.itemId,
+        customerId: data.customerId,
+        quantity: data.quantity,
+        rate: data.rate,
+        discount: data.discount,
+        discountType: data.discountType,
+        amount: data.amount,
         amountPaid: data.amountPaid ?? existing.amountPaid,
+        couponId,
+        couponCode,
+        couponDiscount,
         paymentMode: data.paymentMode || null,
         notes: data.notes || null,
       },
-      include: { item: { include: { category: true } }, customer: true },
+      include: { item: { include: { category: true } }, customer: true, coupon: true },
     });
     return NextResponse.json(sale);
   });

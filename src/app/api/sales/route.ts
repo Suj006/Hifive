@@ -43,6 +43,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let couponId: string | null = null;
+    let couponCode: string | null = null;
+    let couponDiscount = 0;
+    if (data.couponCode) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { code: data.couponCode.trim().toUpperCase() },
+      });
+      if (!coupon) {
+        return jsonError("That coupon code wasn't found. Remove it or pick a valid one.", 422);
+      }
+      couponId = coupon.id;
+      couponCode = coupon.code;
+      couponDiscount = data.couponDiscount;
+    }
+
     // Self-describing invoice number (HF-YYYYMMDD-NNN), scoped to the sale's
     // own transaction date so a backdated entry still numbers correctly.
     const countForDay = await prisma.sale.count({
@@ -52,14 +67,24 @@ export async function POST(request: NextRequest) {
 
     const sale = await prisma.sale.create({
       data: {
-        ...data,
+        date: data.date,
+        itemId: data.itemId,
+        customerId: data.customerId,
+        quantity: data.quantity,
+        rate: data.rate,
+        discount: data.discount,
+        discountType: data.discountType,
+        amount: data.amount,
         // Not specified means "paid in full" — the common case.
         amountPaid: data.amountPaid ?? data.amount,
+        couponId,
+        couponCode,
+        couponDiscount,
         invoiceNumber,
         paymentMode: data.paymentMode || null,
         notes: data.notes || null,
       },
-      include: { item: { include: { category: true } }, customer: true },
+      include: { item: { include: { category: true } }, customer: true, coupon: true },
     });
     return NextResponse.json(sale, { status: 201 });
   });

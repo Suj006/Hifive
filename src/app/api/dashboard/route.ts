@@ -122,6 +122,28 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.due - a.due)
       .slice(0, 5);
 
+    // Leaderboard: customers ranked by total amount spent, within the same
+    // filters (date range/category/product) as the rest of this dashboard.
+    const topCustomersMap = new Map<
+      string,
+      { id: string; code: string; name: string; totalSpent: number; orders: number }
+    >();
+    for (const s of sales) {
+      const entry = topCustomersMap.get(s.customerId) ?? {
+        id: s.customerId,
+        code: s.customer.code,
+        name: s.customer.name,
+        totalSpent: 0,
+        orders: 0,
+      };
+      entry.totalSpent += s.amount;
+      entry.orders += 1;
+      topCustomersMap.set(s.customerId, entry);
+    }
+    const topCustomers = Array.from(topCustomersMap.values())
+      .sort((a, b) => b.totalSpent - a.totalSpent)
+      .slice(0, 5);
+
     // Trend: monthly buckets, or daily when an explicit range of a month or
     // less is selected. A month/day only appears once something happened in
     // it — for an explicit range we pre-seed every bucket so gaps show as a
@@ -250,6 +272,7 @@ export async function GET(request: NextRequest) {
       recentSales: sales.slice(0, 6),
       recentExpenses: expenses.slice(0, 6),
       topDues,
+      topCustomers,
       lowStock,
       topProducts,
       trend,
