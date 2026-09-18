@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
@@ -14,7 +13,7 @@ import { QuickActionTile, ManageTile } from "@/components/dashboard/tiles";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { CategoryChart } from "@/components/dashboard/category-chart";
 import { useApi } from "@/lib/use-api";
-import type { Category, DashboardData } from "@/lib/types";
+import type { Category, DashboardData, ProductName } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
 import { DATE_PRESETS, datePresetRange } from "@/lib/date-presets";
 import {
@@ -47,17 +46,20 @@ export default function DashboardPage() {
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [productName, setProductName] = useState("");
 
   const { data: categories } = useApi<Category[]>("/api/categories");
+  const { data: productNames } = useApi<ProductName[]>("/api/product-names");
 
   const query = useMemo(() => {
     const params = new URLSearchParams();
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     if (categoryId) params.set("categoryId", categoryId);
+    if (productName) params.set("productName", productName);
     const qs = params.toString();
     return `/api/dashboard${qs ? `?${qs}` : ""}`;
-  }, [from, to, categoryId]);
+  }, [from, to, categoryId, productName]);
 
   const { data, loading, error } = useApi<DashboardData>(query);
 
@@ -66,7 +68,7 @@ export default function DashboardPage() {
     return r.from === from && r.to === to;
   })?.key;
   const categoryName = categories?.find((c) => c.id === categoryId)?.name;
-  const hasFilters = Boolean(from || to || categoryId);
+  const hasFilters = Boolean(from || to || categoryId || productName);
 
   return (
     <div>
@@ -84,7 +86,7 @@ export default function DashboardPage() {
             </div>
             <div>
               <CardTitle>Filters</CardTitle>
-              <p className="text-xs text-muted">Narrow the whole dashboard by date range or product category</p>
+              <p className="text-xs text-muted">Narrow the whole dashboard by date range, category or product</p>
             </div>
           </div>
         </CardHeader>
@@ -123,12 +125,22 @@ export default function DashboardPage() {
                 <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="pl-9" />
               </div>
             </Field>
-            <Field label="Category" className="w-full sm:w-56">
+            <Field label="Category" className="w-full sm:w-48">
               <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                 <option value="">All categories</option>
                 {categories?.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Product" className="w-full sm:w-48">
+              <Select value={productName} onChange={(e) => setProductName(e.target.value)}>
+                <option value="">All products</option>
+                {productNames?.map((p) => (
+                  <option key={p.id} value={p.name}>
+                    {p.name}
                   </option>
                 ))}
               </Select>
@@ -141,6 +153,7 @@ export default function DashboardPage() {
                   setFrom("");
                   setTo("");
                   setCategoryId("");
+                  setProductName("");
                 }}
               >
                 <IconClose className="h-4 w-4" /> Clear all
@@ -174,6 +187,14 @@ export default function DashboardPage() {
                   </button>
                 </span>
               ) : null}
+              {productName ? (
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
+                  Product: {productName}
+                  <button onClick={() => setProductName("")} className="text-muted hover:text-foreground cursor-pointer" aria-label="Remove product filter">
+                    <IconClose className="h-3 w-3" />
+                  </button>
+                </span>
+              ) : null}
             </div>
           ) : null}
         </CardContent>
@@ -192,7 +213,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Total Purchases"
               value={formatINR(data.totals.purchases)}
@@ -261,102 +282,6 @@ export default function DashboardPage() {
                 ],
               }}
             />
-            <StatCard
-              label="Active Items"
-              value={String(data.counts.items)}
-              icon={<IconLayers className="h-5 w-5" />}
-              accent="gold"
-              sub={`${data.counts.vendors} vendors · ${data.counts.customers} customers`}
-            />
-          </div>
-
-          <div className="mt-8">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-              Quick actions
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <QuickActionTile
-                href="/purchases"
-                icon={<IconCartDown className="h-5 w-5" />}
-                title="Record purchase"
-                subtitle="Log a raw material buy"
-                tone="purple"
-              />
-              <QuickActionTile
-                href="/production"
-                icon={<IconSparkle className="h-5 w-5" />}
-                title="Record production"
-                subtitle="Log items you've made"
-                tone="teal"
-              />
-              <QuickActionTile
-                href="/sales"
-                icon={<IconTag className="h-5 w-5" />}
-                title="Record sale"
-                subtitle="Log a finished sale"
-                tone="pink"
-              />
-              <QuickActionTile
-                href="/expenses"
-                icon={<IconWallet className="h-5 w-5" />}
-                title="Record expense"
-                subtitle="Log a business cost"
-                tone="gold"
-              />
-            </div>
-          </div>
-
-          <div className="mt-8">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
-              Manage
-            </p>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
-              <ManageTile
-                href="/items"
-                icon={<IconLayers className="h-5 w-5" />}
-                label="Item Master"
-                count={data.counts.items}
-                tone="pink"
-              />
-              <ManageTile
-                href="/product-names"
-                icon={<IconClipboard className="h-5 w-5" />}
-                label="Product Names"
-                tone="purple"
-              />
-              <ManageTile
-                href="/categories"
-                icon={<IconFilter className="h-5 w-5" />}
-                label="Categories"
-                tone="teal"
-              />
-              <ManageTile
-                href="/vendors"
-                icon={<IconTruck className="h-5 w-5" />}
-                label="Vendors"
-                count={data.counts.vendors}
-                tone="gold"
-              />
-              <ManageTile
-                href="/customers"
-                icon={<IconUsers className="h-5 w-5" />}
-                label="Customers"
-                count={data.counts.customers}
-                tone="pink"
-              />
-              <ManageTile
-                href="/expenses"
-                icon={<IconWallet className="h-5 w-5" />}
-                label="Expenses"
-                tone="teal"
-              />
-              <ManageTile
-                href="/reports"
-                icon={<IconChart className="h-5 w-5" />}
-                label="Reports"
-                tone="purple"
-              />
-            </div>
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-3">
@@ -501,13 +426,93 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/reports"
-              className="rounded-xl border border-brand-purple-2/40 bg-[image:var(--gradient-brand-soft)] px-4 py-2 text-sm font-medium text-foreground transition-colors hover:brightness-110"
-            >
-              Drill down in Reports →
-            </Link>
+          <div className="mt-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              Quick actions
+            </p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <QuickActionTile
+                href="/purchases"
+                icon={<IconCartDown className="h-5 w-5" />}
+                title="Record purchase"
+                subtitle="Log a raw material buy"
+                tone="purple"
+              />
+              <QuickActionTile
+                href="/production"
+                icon={<IconSparkle className="h-5 w-5" />}
+                title="Record production"
+                subtitle="Log items you've made"
+                tone="teal"
+              />
+              <QuickActionTile
+                href="/sales"
+                icon={<IconTag className="h-5 w-5" />}
+                title="Record sale"
+                subtitle="Log a finished sale"
+                tone="pink"
+              />
+              <QuickActionTile
+                href="/expenses"
+                icon={<IconWallet className="h-5 w-5" />}
+                title="Record expense"
+                subtitle="Log a business cost"
+                tone="gold"
+              />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted">
+              Manage
+            </p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
+              <ManageTile
+                href="/items"
+                icon={<IconLayers className="h-5 w-5" />}
+                label="Item Master"
+                count={data.counts.items}
+                tone="pink"
+              />
+              <ManageTile
+                href="/product-names"
+                icon={<IconClipboard className="h-5 w-5" />}
+                label="Product Names"
+                tone="purple"
+              />
+              <ManageTile
+                href="/categories"
+                icon={<IconFilter className="h-5 w-5" />}
+                label="Categories"
+                tone="teal"
+              />
+              <ManageTile
+                href="/vendors"
+                icon={<IconTruck className="h-5 w-5" />}
+                label="Vendors"
+                count={data.counts.vendors}
+                tone="gold"
+              />
+              <ManageTile
+                href="/customers"
+                icon={<IconUsers className="h-5 w-5" />}
+                label="Customers"
+                count={data.counts.customers}
+                tone="pink"
+              />
+              <ManageTile
+                href="/expenses"
+                icon={<IconWallet className="h-5 w-5" />}
+                label="Expenses"
+                tone="teal"
+              />
+              <ManageTile
+                href="/reports"
+                icon={<IconChart className="h-5 w-5" />}
+                label="Reports"
+                tone="purple"
+              />
+            </div>
           </div>
         </>
       )}

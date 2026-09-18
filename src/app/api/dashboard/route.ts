@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
     const fromParam = params.get("from");
     const toParam = params.get("to");
     const categoryId = params.get("categoryId");
+    const productName = params.get("productName");
 
     const explicitRange = Boolean(fromParam || toParam);
     const rangeFrom = fromParam ? new Date(fromParam) : null;
@@ -46,10 +47,13 @@ export async function GET(request: NextRequest) {
       gte: rangeFrom ?? undefined,
       lte: rangeTo ?? undefined,
     };
-    // Categories are an audience/segment tag mainly used on finished
-    // products, so this filter only narrows the sales side (and anything
-    // derived from it) — raw material purchases are left untouched.
-    const productFilter = categoryId ? { categoryId } : {};
+    // Category and product name are both finished-product attributes, so
+    // this filter only narrows the sales side (and anything derived from
+    // it) — raw material purchases are left untouched.
+    const productFilter = {
+      ...(categoryId ? { categoryId } : {}),
+      ...(productName ? { name: productName } : {}),
+    };
 
     const now = new Date();
     const monthStart = startOfMonth(now);
