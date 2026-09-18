@@ -76,7 +76,10 @@ export function downloadCsv(filename: string, rows: Array<Record<string, string 
     headers.join(","),
     ...rows.map((row) => headers.map((h) => escape(row[h])).join(",")),
   ];
-  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+  // The UTF-8 BOM is what makes Excel on Windows render ₹ and — correctly —
+  // without it, Excel guesses the system ANSI codepage instead of UTF-8 and
+  // every non-ASCII character (rupee sign, em dash, …) comes out garbled.
+  const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

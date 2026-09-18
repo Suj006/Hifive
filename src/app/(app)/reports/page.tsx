@@ -14,6 +14,12 @@ import type { Category, Customer, ReportsData, Vendor } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
 import { downloadCsv } from "@/lib/csv";
 import { exportNodeAsPng } from "@/lib/export-png";
+import {
+  ReportExportView,
+  type ExportColumn,
+  type ExportStat,
+  type ExportTableSpec,
+} from "@/components/reports/report-export-view";
 import { DATE_PRESETS, datePresetRange } from "@/lib/date-presets";
 import { PAYMENT_MODES } from "@/lib/constants";
 import {
@@ -49,7 +55,118 @@ const TONE_GLOW: Record<Tone, string> = {
   gold: "from-brand-gold/20 to-transparent",
 };
 
-type PendingExport = { title: string; filename: string; getNode: () => HTMLElement | null };
+// What actually gets rendered and rasterized into the PNG — built from the
+// same data as the on-screen card, but never the on-screen card's own DOM
+// (see report-export-view.tsx for why).
+type PendingExport = {
+  reportTitle: string;
+  filename: string;
+  tables: ExportTableSpec[];
+  stats?: ExportStat[];
+};
+
+// Mirrors the column config passed to each <ReportTable> below — kept as a
+// plain duplicate (rather than a shared generic) so each table's row type
+// stays fully type-checked at its own call site.
+function buildFullReportTables(data: ReportsData): ExportTableSpec[] {
+  return [
+    {
+      title: "Product inventory — made, sold & remaining (as of now)",
+      countLabel: `${data.productInventory.length} products`,
+      emptyText: "No products in the item master yet.",
+      columns: [
+        { key: "code", label: "Code" },
+        { key: "name", label: "Product" },
+        { key: "category", label: "Category" },
+        { key: "made", label: "Made", align: "right", format: (v) => formatNumber(v as number) },
+        { key: "sold", label: "Sold", align: "right", format: (v) => formatNumber(v as number) },
+        { key: "remaining", label: "Remaining", align: "right", format: (v) => formatNumber(v as number) },
+      ],
+      rows: data.productInventory,
+    },
+    {
+      title: "Item-wise purchases (raw materials)",
+      countLabel: `${data.itemWisePurchases.length} items`,
+      emptyText: "No purchases in this range.",
+      columns: [
+        { key: "code", label: "Code" },
+        { key: "name", label: "Item" },
+        { key: "qty", label: "Qty purchased", align: "right", format: (v) => formatNumber(v as number) },
+        { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.itemWisePurchases,
+    },
+    {
+      title: "Item-wise production (items made)",
+      countLabel: `${data.itemWiseProduction.length} items`,
+      emptyText: "No production entries in this range.",
+      columns: [
+        { key: "code", label: "Code" },
+        { key: "name", label: "Product" },
+        { key: "category", label: "Category" },
+        { key: "qty", label: "Qty made", align: "right", format: (v) => formatNumber(v as number) },
+      ],
+      rows: data.itemWiseProduction,
+    },
+    {
+      title: "Item & category-wise sales (products)",
+      countLabel: `${data.itemWiseSales.length} products`,
+      emptyText: "No sales in this range.",
+      columns: [
+        { key: "code", label: "Code" },
+        { key: "name", label: "Product" },
+        { key: "category", label: "Category" },
+        { key: "qty", label: "Qty sold", align: "right", format: (v) => formatNumber(v as number) },
+        { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.itemWiseSales,
+    },
+    {
+      title: "Vendor-wise purchases",
+      countLabel: `${data.vendorWise.length} vendors`,
+      emptyText: "No purchases in this range.",
+      columns: [
+        { key: "name", label: "Vendor" },
+        { key: "entries", label: "Entries", align: "right" },
+        { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.vendorWise,
+    },
+    {
+      title: "Customer-wise sales",
+      countLabel: `${data.customerWise.length} customers`,
+      emptyText: "No sales in this range.",
+      columns: [
+        { key: "name", label: "Customer" },
+        { key: "entries", label: "Entries", align: "right" },
+        { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.customerWise,
+    },
+    {
+      title: "Category-wise sales",
+      countLabel: `${data.categoryWise.length} categories`,
+      emptyText: "No sales in this range.",
+      columns: [
+        { key: "category", label: "Category" },
+        { key: "qty", label: "Qty sold", align: "right", format: (v) => formatNumber(v as number) },
+        { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.categoryWise,
+    },
+    {
+      title: "Expenses by category",
+      countLabel: `${data.expenseWise.length} categories`,
+      emptyText: "No expenses in this range.",
+      columns: [
+        { key: "category", label: "Category" },
+        { key: "entries", label: "Entries", align: "right" },
+        { key: "amount", label: "Amount", align: "right", format: (v) => formatINR(v as number) },
+      ],
+      rows: data.expenseWise,
+    },
+  ];
+}
 
 function ReportTable<T extends Record<string, unknown>>({
   title,
@@ -74,12 +191,10 @@ function ReportTable<T extends Record<string, unknown>>({
   countLabel?: string;
   emptyText: string;
   minWidth?: number;
-  onExportPngRequest: (getNode: () => HTMLElement | null, title: string, filename: string) => void;
+  onExportPngRequest: (spec: ExportTableSpec, filename: string) => void;
 }) {
-  const cardRef = useRef<HTMLDivElement>(null);
-
   return (
-    <div ref={cardRef}>
+    <div>
       <Card className="relative overflow-hidden">
         <div
           className={`pointer-events-none absolute -right-10 -top-14 h-40 w-40 rounded-full bg-gradient-to-br blur-3xl ${TONE_GLOW[tone]}`}
@@ -121,7 +236,24 @@ function ReportTable<T extends Record<string, unknown>>({
               variant="secondary"
               size="sm"
               disabled={rows.length === 0}
-              onClick={() => onExportPngRequest(() => cardRef.current, title, pngName)}
+              onClick={() => {
+                const exportColumns: ExportColumn[] = columns.map((c) => ({
+                  key: String(c.key),
+                  label: c.label,
+                  align: c.align,
+                  format: c.format,
+                }));
+                onExportPngRequest(
+                  {
+                    title,
+                    countLabel: `${rows.length} ${countLabel}`,
+                    columns: exportColumns,
+                    rows: rows as Record<string, unknown>[],
+                    emptyText,
+                  },
+                  pngName
+                );
+              }}
             >
               <IconImage className="h-4 w-4" /> PNG
             </Button>
@@ -179,9 +311,10 @@ export default function ReportsPage() {
   const [customerId, setCustomerId] = useState("");
   const [paymentMode, setPaymentMode] = useState("");
   const { push } = useToast();
-  const reportBodyRef = useRef<HTMLDivElement>(null);
   const [pendingExport, setPendingExport] = useState<PendingExport | null>(null);
+  const [exportPreview, setExportPreview] = useState<PendingExport | null>(null);
   const [exporting, setExporting] = useState(false);
+  const exportNodeRef = useRef<HTMLDivElement>(null);
 
   const { data: categories } = useApi<Category[]>("/api/categories");
   const { data: vendors } = useApi<Vendor[]>("/api/vendors");
@@ -213,26 +346,60 @@ export default function ReportsPage() {
     from || to || categoryId || vendorId || customerId || paymentMode
   );
 
-  function requestExportPng(getNode: () => HTMLElement | null, title: string, filename: string) {
-    setPendingExport({ getNode, title, filename });
+  const filtersSummary = useMemo(() => {
+    const parts: string[] = [];
+    if (from) parts.push(`From ${formatDate(`${from}T00:00:00`)}`);
+    if (to) parts.push(`To ${formatDate(`${to}T00:00:00`)}`);
+    if (categoryName) parts.push(`Category: ${categoryName}`);
+    if (vendorName) parts.push(`Vendor: ${vendorName}`);
+    if (customerName) parts.push(`Customer: ${customerName}`);
+    if (paymentMode) parts.push(`Payment: ${paymentMode}`);
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [from, to, categoryName, vendorName, customerName, paymentMode]);
+
+  function requestExportPng(spec: ExportTableSpec, filename: string) {
+    setPendingExport({ reportTitle: spec.title, filename, tables: [spec] });
+  }
+
+  function requestExportFullReport() {
+    if (!data) return;
+    setPendingExport({
+      reportTitle: "Full Report",
+      filename: "hifive-reports.png",
+      tables: buildFullReportTables(data),
+      stats: [
+        { label: "Purchases", value: formatINR(data.totals.purchaseAmount) },
+        { label: "Sales", value: formatINR(data.totals.saleAmount) },
+        { label: "Expenses", value: formatINR(data.totals.expenseAmount) },
+        {
+          label: "Net",
+          value: formatINR(
+            data.totals.saleAmount - data.totals.purchaseAmount - data.totals.expenseAmount
+          ),
+        },
+        { label: "Categories sold", value: String(data.categoryWise.length) },
+      ],
+    });
   }
 
   async function handleConfirmExport() {
     if (!pendingExport) return;
-    const node = pendingExport.getNode();
-    if (!node) {
-      push("Could not find that report on screen", "error");
-      setPendingExport(null);
-      return;
-    }
     setExporting(true);
     try {
+      // Rendered off-screen first, then captured — see report-export-view.tsx.
+      setExportPreview(pendingExport);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+      const node = exportNodeRef.current;
+      if (!node) throw new Error("Export view was not ready");
       await exportNodeAsPng(node, pendingExport.filename);
       push("Image downloaded");
       setPendingExport(null);
     } catch {
       push("Could not export image — please try again", "error");
     } finally {
+      setExportPreview(null);
       setExporting(false);
     }
   }
@@ -243,13 +410,7 @@ export default function ReportsPage() {
         title="Reports"
         description="Drill down into purchases, sales & production — item-wise, category-wise, vendor-wise and customer-wise."
         action={
-          <Button
-            variant="secondary"
-            disabled={!data}
-            onClick={() =>
-              requestExportPng(() => reportBodyRef.current, "Hi Five by Jia — Reports", "hifive-reports.png")
-            }
-          >
+          <Button variant="secondary" disabled={!data} onClick={requestExportFullReport}>
             <IconImage className="h-4 w-4" /> Export full report
           </Button>
         }
@@ -429,7 +590,7 @@ export default function ReportsPage() {
           ))}
         </div>
       ) : (
-        <div ref={reportBodyRef}>
+        <div>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
             <StatCard
               label="Purchases"
@@ -627,13 +788,33 @@ export default function ReportsPage() {
         title="Export as image?"
         description={
           pendingExport
-            ? `This creates a PNG snapshot of "${pendingExport.title}" that you can save or share. Continue?`
+            ? `This creates a PNG snapshot of "${pendingExport.reportTitle}" that you can save or share. Continue?`
             : undefined
         }
         confirmLabel="Export PNG"
         confirmVariant="primary"
         loading={exporting}
       />
+
+      {/* Rendered off-screen only while an export is in flight, then captured
+          by html-to-image — see report-export-view.tsx for why this is a
+          dedicated template rather than a screenshot of the cards above. */}
+      <div
+        style={{ position: "fixed", top: 0, left: -99999, pointerEvents: "none" }}
+        aria-hidden="true"
+      >
+        <div ref={exportNodeRef}>
+          {exportPreview ? (
+            <ReportExportView
+              reportTitle={exportPreview.reportTitle}
+              generatedAt={new Date()}
+              filtersSummary={filtersSummary}
+              stats={exportPreview.stats}
+              tables={exportPreview.tables}
+            />
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
