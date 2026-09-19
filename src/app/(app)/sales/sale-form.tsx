@@ -112,6 +112,10 @@ function SaleFormBody({
   const { data: customers } = useApi<Customer[]>("/api/customers");
   const { data: coupons } = useApi<Coupon[]>("/api/coupons");
   const [form, setForm] = useState<FormState>(() => initialState(sale));
+  // Only meaningful once a customer is picked — used to hide a once-per-customer
+  // coupon they've already used (an empty customerId still resolves to a
+  // valid, harmless "no rows" request).
+  const { data: customerSales } = useApi<Sale[]>(`/api/sales?customerId=${form.customerId}`);
   // Always starts "untouched" (even when editing) so the Amount field keeps
   // auto-recalculating from Quantity/Rate/Discount until the person types
   // into it directly — otherwise editing an existing sale's quantity or
@@ -129,16 +133,28 @@ function SaleFormBody({
 
   const activeItems = (items ?? []).filter((i) => i.isActive || i.id === sale?.itemId);
   const activeCustomers = (customers ?? []).filter((c) => c.isActive || c.id === sale?.customerId);
-  // Only offer coupons whose validity window covers the sale's own date —
-  // except the one already applied to this sale, which stays selectable
-  // (and de-selectable) even if its window has since passed.
+  // A once-per-customer coupon the selected customer has already used on a
+  // different sale — excluded below the same way an expired one is.
+  const usedCouponIdsByCustomer = new Set(
+    (customerSales ?? [])
+      .filter((s) => s.id !== sale?.id)
+      .map((s) => s.couponId)
+      .filter((id): id is string => !!id)
+  );
+
+  // Only offer coupons whose validity window covers the sale's own date, and
+  // that this customer hasn't already used up (for a once-per-customer
+  // coupon) — except the one already applied to this sale, which stays
+  // selectable (and de-selectable) even if it no longer otherwise qualifies.
   const activeCoupons = (coupons ?? [])
     .filter((c) => c.isActive || c.id === sale?.couponId)
     .filter((c) => {
       if (c.id === sale?.couponId) return true;
       const start = toDateInputValue(c.startDate);
       const end = c.endDate ? toDateInputValue(c.endDate) : null;
-      return form.date >= start && (!end || form.date <= end);
+      if (form.date < start || (end && form.date > end)) return false;
+      if (c.oncePerCustomer && usedCouponIdsByCustomer.has(c.id)) return false;
+      return true;
     });
 
   const customerOptions = useMemo(
@@ -454,7 +470,7 @@ function SaleFormBody({
               : activeCoupons.length === 0
               ? (coupons ?? []).length === 0
                 ? "No coupons yet"
-                : "No coupons valid for this date"
+                : "No coupons available for this customer/date"
               : "Optional"
           }
         >
