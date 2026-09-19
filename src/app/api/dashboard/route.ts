@@ -58,6 +58,11 @@ export async function GET(request: NextRequest) {
     const now = new Date();
     const monthStart = startOfMonth(now);
 
+    // "Last 3 months" section always covers the current calendar month plus
+    // the two before it, regardless of the filters above — it's meant to
+    // answer "what's been trending lately", not follow an arbitrary range.
+    const threeMonthStart = addMonths(monthStart, -2);
+
     const [
       purchases,
       sales,
@@ -69,6 +74,8 @@ export async function GET(request: NextRequest) {
       vendorCount,
       customerCount,
       rawMaterials,
+      trendSales,
+      activeProducts,
     ] = await Promise.all([
       prisma.purchase.findMany({
         where: { date: dateFilter },
@@ -99,6 +106,14 @@ export async function GET(request: NextRequest) {
       prisma.item.findMany({
         where: { type: "RAW_MATERIAL", isActive: true },
         include: { purchases: { select: { quantity: true } } },
+      }),
+      prisma.sale.findMany({
+        where: { date: { gte: threeMonthStart } },
+        include: { item: { include: { category: true } } },
+      }),
+      prisma.item.findMany({
+        where: { type: "PRODUCT", isActive: true },
+        select: { id: true, name: true },
       }),
     ]);
 
@@ -248,6 +263,95 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => a.stock - b.stock)
       .slice(0, 6);
 
+    // "Last 3 months" trends — category breakdown per month, plus standout
+    // products — always the current calendar month and the two before it,
+    // independent of the filters above (see threeMonthStart).
+    const monthBuckets = new Map<string, { label: string; byCategory: Map<string, number> }>();
+    for (let i = 2; i >= 0; i--) {
+      const d = addMonths(monthStart, -i);
+      monthBuckets.set(monthKey(d), { label: monthLabel(d), byCategory: new Map() });
+    }
+    const categoryTotals = new Map<string, number>();
+    for (const s of trendSales) {
+      const catName = s.item.category?.name ?? "No category";
+      const bucket = monthBuckets.get(monthKey(new Date(s.date)));
+      if (bucket) bucket.byCategory.set(catName, (bucket.byCategory.get(catName) ?? 0) + s.amount);
+      categoryTotals.set(catName, (categoryTotals.get(catName) ?? 0) + s.amount);
+    }
+    // Fixed order by total volume — capped at 4 named categories so the chart
+    // never grows an unbounded number of series; anything past that folds
+    // into "Other" rather than getting its own generated color.
+    const sortedCategoryNames = Array.from(categoryTotals.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+    const topCategoryNames = sortedCategoryNames.slice(0, 4);
+    const hasOtherCategory = sortedCategoryNames.length > 4;
+    const monthlyCategoryTrend = Array.from(monthBuckets.values()).map((bucket) => {
+      const row: Record<string, string | number> = { label: bucket.label };
+      let otherTotal = 0;
+      for (const [cat, amt] of bucket.byCategory) {
+        if (topCategoryNames.includes(cat)) row[cat] = amt;
+        else otherTotal += amt;
+      }
+      for (const cat of topCategoryNames) if (!(cat in row)) row[cat] = 0;
+      if (hasOtherCategory) row.Other = otherTotal;
+      return row;
+    });
+    const categorySeries = hasOtherCategory ? [...topCategoryNames, "Other"] : topCategoryNames;
+
+    const threeMonthProductMap = new Map<
+      string,
+      { id: string; name: string; unit: string; qty: number; amount: number }
+    >();
+    for (const s of trendSales) {
+      const entry = threeMonthProductMap.get(s.itemId) ?? {
+        id: s.itemId,
+        name: s.item.name,
+        unit: s.item.unit,
+        qty: 0,
+        amount: 0,
+      };
+      entry.qty += s.quantity;
+      entry.amount += s.amount;
+      threeMonthProductMap.set(s.itemId, entry);
+    }
+    const threeMonthProducts = Array.from(threeMonthProductMap.values());
+    const bestSellerByQty =
+      threeMonthProducts.length > 0 ? threeMonthProducts.reduce((a, b) => (b.qty > a.qty ? b : a)) : null;
+    const topRevenueProduct =
+      threeMonthProducts.length > 0
+        ? threeMonthProducts.reduce((a, b) => (b.amount > a.amount ? b : a))
+        : null;
+    const slowestMoverByQty =
+      threeMonthProducts.length > 0 ? threeMonthProducts.reduce((a, b) => (b.qty < a.qty ? b : a)) : null;
+    const lowestRevenueProduct =
+      threeMonthProducts.length > 0
+        ? threeMonthProducts.reduce((a, b) => (b.amount < a.amount ? b : a))
+        : null;
+    const topCategory = sortedCategoryNames.length
+      ? { name: sortedCategoryNames[0], amount: categoryTotals.get(sortedCategoryNames[0])! }
+      : null;
+
+    // Active products that had zero sales anywhere in the 3-month window —
+    // a dead-stock signal worth flagging even though nothing "sold least".
+    const soldProductIds = new Set(threeMonthProductMap.keys());
+    const unsoldProducts = activeProducts.filter((p) => !soldProductIds.has(p.id));
+    const deadStock = {
+      count: unsoldProducts.length,
+      items: unsoldProducts.slice(0, 8).map((p) => ({ id: p.id, name: p.name })),
+    };
+
+    const threeMonthTrends = {
+      monthly: monthlyCategoryTrend,
+      categories: categorySeries,
+      bestSellerByQty,
+      topRevenueProduct,
+      slowestMoverByQty,
+      lowestRevenueProduct,
+      topCategory,
+      deadStock,
+    };
+
     return NextResponse.json({
       totals: {
         purchases: totalPurchases,
@@ -277,6 +381,7 @@ export async function GET(request: NextRequest) {
       topProducts,
       trend,
       categoryBreakdown,
+      threeMonthTrends,
     });
   });
 }

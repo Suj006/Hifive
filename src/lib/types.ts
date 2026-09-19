@@ -187,6 +187,28 @@ export interface DashboardData {
   topProducts: { id: string; name: string; soldQty: number; soldAmount: number }[];
   trend: { label: string; purchases: number; sales: number; expenses: number }[];
   categoryBreakdown: { category: string; amount: number }[];
+  threeMonthTrends: ThreeMonthTrends;
+}
+
+export interface ThreeMonthProductStat {
+  id: string;
+  name: string;
+  unit: string;
+  qty: number;
+  amount: number;
+}
+
+export interface ThreeMonthTrends {
+  // One row per month, oldest first — `label` plus one numeric key per
+  // entry in `categories` (amounts in INR for that month/category).
+  monthly: Record<string, string | number>[];
+  categories: string[];
+  bestSellerByQty: ThreeMonthProductStat | null;
+  topRevenueProduct: ThreeMonthProductStat | null;
+  slowestMoverByQty: ThreeMonthProductStat | null;
+  lowestRevenueProduct: ThreeMonthProductStat | null;
+  topCategory: { name: string; amount: number } | null;
+  deadStock: { count: number; items: { id: string; name: string }[] };
 }
 
 export interface ReportsData {

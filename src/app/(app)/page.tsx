@@ -12,6 +12,8 @@ import { Field, Input, Select } from "@/components/ui/input";
 import { QuickActionTile, ManageTile } from "@/components/dashboard/tiles";
 import { TrendChart } from "@/components/dashboard/trend-chart";
 import { CategoryChart } from "@/components/dashboard/category-chart";
+import { CategoryTrendChart } from "@/components/dashboard/category-trend-chart";
+import { InsightTile } from "@/components/dashboard/insight-tile";
 import { useApi } from "@/lib/use-api";
 import type { Category, DashboardData, ProductName } from "@/lib/types";
 import { formatDate, formatINR, formatNumber } from "@/lib/format";
@@ -35,6 +37,7 @@ import {
   IconTrophy,
   IconCoupon,
   IconBox,
+  IconTrendDown,
 } from "@/components/icons";
 
 // Client-only: its initial open/closed state depends on localStorage, so it
@@ -320,6 +323,105 @@ export default function DashboardPage() {
                 <CategoryChart data={data.categoryBreakdown} />
               </CardContent>
             </Card>
+          </div>
+
+          <div className="mt-8">
+            <div className="mb-3 flex items-center gap-2">
+              <IconSparkle className="h-4 w-4 text-brand-gold" />
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">
+                Last 3 Months — What&apos;s Trending
+              </p>
+            </div>
+            <Card className="mb-4 overflow-hidden">
+              <CardHeader>
+                <CardTitle>Monthly sales by category</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategoryTrendChart
+                  data={data.threeMonthTrends.monthly}
+                  categories={data.threeMonthTrends.categories}
+                />
+              </CardContent>
+            </Card>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <InsightTile
+                icon={<IconTrophy className="h-5 w-5" />}
+                label="Best Seller"
+                title={data.threeMonthTrends.bestSellerByQty?.name ?? "No sales yet"}
+                value={
+                  data.threeMonthTrends.bestSellerByQty
+                    ? `${formatNumber(data.threeMonthTrends.bestSellerByQty.qty)} ${data.threeMonthTrends.bestSellerByQty.unit} sold`
+                    : undefined
+                }
+                sub="Highest quantity sold"
+                accent="gold"
+              />
+              <InsightTile
+                icon={<IconRupee className="h-5 w-5" />}
+                label="Top Revenue"
+                title={data.threeMonthTrends.topRevenueProduct?.name ?? "No sales yet"}
+                value={
+                  data.threeMonthTrends.topRevenueProduct
+                    ? formatINR(data.threeMonthTrends.topRevenueProduct.amount)
+                    : undefined
+                }
+                sub="Highest sales value"
+                accent="pink"
+              />
+              <InsightTile
+                icon={<IconTag className="h-5 w-5" />}
+                label="Top Category"
+                title={data.threeMonthTrends.topCategory?.name ?? "No sales yet"}
+                value={
+                  data.threeMonthTrends.topCategory
+                    ? formatINR(data.threeMonthTrends.topCategory.amount)
+                    : undefined
+                }
+                sub="Best-selling category"
+                accent="purple"
+              />
+              <InsightTile
+                icon={<IconTrendDown className="h-5 w-5" />}
+                label="Slowest Mover"
+                title={data.threeMonthTrends.slowestMoverByQty?.name ?? "—"}
+                value={
+                  data.threeMonthTrends.slowestMoverByQty
+                    ? `${formatNumber(data.threeMonthTrends.slowestMoverByQty.qty)} ${data.threeMonthTrends.slowestMoverByQty.unit} sold`
+                    : undefined
+                }
+                sub="Lowest quantity sold"
+                accent="teal"
+              />
+              <InsightTile
+                icon={<IconAlert className="h-5 w-5" />}
+                label="Lowest Revenue"
+                title={data.threeMonthTrends.lowestRevenueProduct?.name ?? "—"}
+                value={
+                  data.threeMonthTrends.lowestRevenueProduct
+                    ? formatINR(data.threeMonthTrends.lowestRevenueProduct.amount)
+                    : undefined
+                }
+                sub="Smallest contribution to sales"
+                accent="gold"
+              />
+              <InsightTile
+                icon={<IconBox className="h-5 w-5" />}
+                label="Dead Stock"
+                title={
+                  data.threeMonthTrends.deadStock.count === 0
+                    ? "Everything's selling!"
+                    : `${data.threeMonthTrends.deadStock.count} product${
+                        data.threeMonthTrends.deadStock.count === 1 ? "" : "s"
+                      }`
+                }
+                sub={
+                  data.threeMonthTrends.deadStock.count === 0
+                    ? "No unsold products in 3 months"
+                    : `Not sold: ${data.threeMonthTrends.deadStock.items.map((i) => i.name).join(", ")}`
+                }
+                accent={data.threeMonthTrends.deadStock.count === 0 ? "teal" : "purple"}
+              />
+            </div>
           </div>
 
           <div className="mt-8 grid grid-cols-1 gap-4 xl:grid-cols-3">

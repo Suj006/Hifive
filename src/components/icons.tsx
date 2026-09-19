@@ -107,6 +107,13 @@ export const IconTrendUp = (props: SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+export const IconTrendDown = (props: SVGProps<SVGSVGElement>) => (
+  <svg {...base(props)}>
+    <path d="M3 7l6 6 4-4 8 8" />
+    <path d="M15 18h6v-6" />
+  </svg>
+);
+
 export const IconWallet = (props: SVGProps<SVGSVGElement>) => (
   <svg {...base(props)}>
     <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h13A2.5 2.5 0 0 1 21 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 16.5Z" />
